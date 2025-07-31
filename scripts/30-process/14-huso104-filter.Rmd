@@ -1,0 +1,15 @@
+---
+title: "Prepare HusO104 data"
+prerequisites:
+    - data/cleaned/husO104_tri_cumu.csv
+targets:
+    - data/processed/huso104_cum_2009_06_14_to_11_22.rds
+makefile: false
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center")
+knitr::opts_chunk$set(fig.height = 8, fig.width = 6, out.width = "100%")
+knitr::opts_chunk$set(comment = "#>")
+options(width = 100)
+```

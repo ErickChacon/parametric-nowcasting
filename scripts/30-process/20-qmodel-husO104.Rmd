@@ -1,0 +1,113 @@
+---
+title: "Exploratory analysis hus0104"
+output: html_document
+makefile: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
+```
+
+## Load packages and data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
+
+library(splines)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(tidyr)
+library(latex2exp)
+
+path_proj <- here::here()
+path_source <- file.path(path_proj, "source")
+
+husO104 <- read.csv(file.path(path_proj, "data", "cleaned", "husO104_tri_cumu.csv"),)
+```
+
+## Filter dates of interest
+
+```{r}
+husO104 <- husO104 |>
+    mutate(date = as.Date(X)) |>
+    select(-X)
+
+date_range <- as.Date(c("2011-05-12", "2011-06-07"))
+
+husO104_input <- husO104 |>
+    filter(date >= date_range[1] & date <= date_range[2])
+# |>
+#     tibble::column_to_rownames('date') |>
+#     as.matrix()
+# set_week_start("Sunday")
+
+df <- husO104_input |>
+    pivot_longer(starts_with("delay"), names_to = "delay", values_to = "cases",
+                 names_transform = function(x) as.numeric(sub("delay", "", x))) |>
+    mutate(available_delay = as.numeric(date_range[2] - date)) |>
+    filter(delay <= available_delay)
+```
+
+## Fit Exponential and Gompertz curves
+
+```{r}
+# prepare data
+somedates <- seq(as.Date("2011-05-20"), as.Date("2011-05-27"), "1 day")
+# somedates <- seq(as.Date("2011-05-22"), as.Date("2011-05-22"), "1 day")
+df_check <- filter(df, date %in% somedates) |>
+    mutate(date = factor(date))
+df_fit <- data.frame(delay = seq(0, 15, length = 100))
+
+# models
+mod_gomp <- nls(cases ~ exp(logN[date]) * exp(logphi*exp(-b * delay)), data = df_check,
+    start = list(b = 0.1, logphi = log(0.01), logN = rep(log(50), length(unique(df_check$date)))))
+mod_exp <- nls(cases ~ exp(logN[date]) * (1 - exp(-b * delay)), data = df_check,
+    start = list(b = 0.5, logN = rep(log(50), length(unique(df_check$date)))))
+
+sapply(list(Exponential = mod_exp, Gompertz = mod_gomp),
+       function(x) c(AIC = AIC(x), BIC = BIC(x), SSE = deviance(x))) |>
+    data.frame()
+
+#     Exponential  Gompertz
+# AIC    660.5158  626.3501
+# BIC    688.2227  656.8277
+# SSE   1573.2639 1157.9643
+
+# predict
+df_check <- df_check |>
+    mutate(gomp_total = exp(coef(mod_gomp)[-(1:2)])[as.integer(df_check$date)],
+           gomp_q = cases / gomp_total,
+           exp_total = exp(coef(mod_exp)[-(1)])[as.integer(df_check$date)],
+           exp_q = cases / exp_total
+    ) |>
+    pivot_longer(gomp_total:exp_q, names_to = c("model", "var"), names_pattern = "(.*)_(.*)") |>
+    pivot_wider(names_from = var, values_from = value)
+
+df_fit <- df_fit |>
+    mutate(gomp_q = exp(coef(mod_gomp)["logphi"] * exp(-coef(mod_gomp)["b"] * delay)),
+           exp_q = 1 - exp(-coef(mod_exp)["b"] * delay)
+    ) |>
+    pivot_longer(gomp_q:exp_q, names_to = c("model"), values_to = "q",
+                 names_transform = function(x) sub("_q", "", x)
+    )
+
+# visualize
+mylabs <- c("exp" = "(a) Exponential", "gomp" = "(b) Gompertz")
+p <- ggplot(df_check) +
+    geom_line(aes(delay, q, group = date), color = "gray", linewidth = rel(0.3)) +
+    geom_point(aes(delay, q, group = date, color = "Empirical"), size = rel(0.5)) +
+    geom_line(aes(delay, q, color = "Theoretical"), df_fit, linewidth = rel(0.5), linetype = "dashed") +
+    labs(title = NULL, y = TeX("$q(d)$"), x = TeX("$d$"), color = NULL) +
+    facet_wrap(~ model, scales = "free", labeller = as_labeller(mylabs)) +
+    theme_classic(9) +
+    scale_colour_manual(values = c("gray30", "red")) +
+    theme(
+        legend.position = c(0.9, 0.15),
+        strip.background = element_blank(),
+        strip.text = element_text(face = "bold")
+    )
+ggsave(filename = file.path(path_proj, "plots_to_show", "qd_emp_fit_husO104.png"),
+       plot = p,
+       width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)
+```
