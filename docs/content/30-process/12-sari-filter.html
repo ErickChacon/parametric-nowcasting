@@ -10,13 +10,7 @@ targets:
 
 <div id="load-packages-scripts-and-data" class="section level2">
 <h2>Load packages, scripts and data</h2>
-<pre class="r"><code>path_proj &lt;- here::here()
-path_src &lt;- file.path(path_proj, &quot;src&quot;)
-path_data &lt;- file.path(path_proj, &quot;data&quot;)
-path_cleaned &lt;- file.path(path_data, &quot;cleaned&quot;)
-path_processed &lt;- file.path(path_data, &quot;processed&quot;)
-
-library(dplyr)</code></pre>
+<pre class="r"><code>library(dplyr)</code></pre>
 <pre><code>#&gt; 
 #&gt; Attaching package: &#39;dplyr&#39;</code></pre>
 <pre><code>#&gt; The following objects are masked from &#39;package:stats&#39;:
@@ -27,6 +21,12 @@ library(dplyr)</code></pre>
 #&gt;     intersect, setdiff, setequal, union</code></pre>
 <pre class="r"><code>library(aweek)
 library(tidyr)
+
+path_proj &lt;- here::here()
+path_src &lt;- file.path(path_proj, &quot;src&quot;)
+path_data &lt;- file.path(path_proj, &quot;data&quot;)
+path_cleaned &lt;- file.path(path_data, &quot;cleaned&quot;)
+path_processed &lt;- file.path(path_data, &quot;processed&quot;)
 
 source(file.path(path_src, &quot;process-data.R&quot;))
 
@@ -88,5 +88,5 @@ sari_41002</code></pre>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   0.700   0.335   0.673</code></pre>
+#&gt;   0.722   0.326   0.687</code></pre>
 </div>

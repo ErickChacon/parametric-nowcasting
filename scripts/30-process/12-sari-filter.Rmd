@@ -16,15 +16,15 @@ options(width = 100)
 ## Load packages, scripts and data
 
 ```{r}
+library(dplyr)
+library(aweek)
+library(tidyr)
+
 path_proj <- here::here()
 path_src <- file.path(path_proj, "src")
 path_data <- file.path(path_proj, "data")
 path_cleaned <- file.path(path_data, "cleaned")
 path_processed <- file.path(path_data, "processed")
-
-library(dplyr)
-library(aweek)
-library(tidyr)
 
 source(file.path(path_src, "process-data.R"))
 
