@@ -1,0 +1,33 @@
+# All available Hugo versions are listed here: https://gitlab.com/pages/hugo/container_registry
+image: registry.gitlab.com/pages/hugo:0.111.3
+
+variables:
+  HUGO_ENV: production
+
+default:
+  before_script:
+    - apk add --no-cache go curl bash nodejs
+    - cd docs
+    - hugo mod init gitlab.com/pages/hugo
+    - hugo mod get -u github.com/ErickChacon/scholar-docs
+    - cd ..
+
+test:
+  script:
+  - cd docs
+  - hugo
+  except:
+  - main
+
+pages:
+  script:
+  - cd docs
+  - hugo
+  - cd ..
+  - mv docs/public public
+  - ls -R public
+  artifacts:
+    paths:
+    - public
+  only:
+  - main
