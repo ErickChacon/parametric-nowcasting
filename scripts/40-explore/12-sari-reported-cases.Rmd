@@ -46,7 +46,7 @@ sari_long <- reporcases_longer(sari) |>
 
 ## Visualize cumulative reported cases
 
-```{r}
+```{r, fig.height = 5}
 p <- sari_long |>
     ggplot() +
     geom_line(aes(delay, cases), color = "gray30", linewidth = rel(0.4)) +
