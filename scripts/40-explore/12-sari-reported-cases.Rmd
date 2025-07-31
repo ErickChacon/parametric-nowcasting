@@ -1,0 +1,77 @@
+---
+title: "Exploratory analysis of SARI reported cases"
+prerequisites:
+    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+targets:
+    - data/figures/sari_reported_cases.png
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center")
+knitr::opts_chunk$set(fig.height = 6, fig.width = 8, out.width = "100%")
+knitr::opts_chunk$set(comment = "#>")
+options(width = 100)
+```
+
+## Load packages, scripts and data
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(latex2exp)
+
+path_proj <- here::here()
+path_src <- file.path(path_proj, "src")
+path_data <- file.path(path_proj, "data")
+path_cleaned <- file.path(path_data, "cleaned")
+path_processed <- file.path(path_data, "processed")
+path_figures <- file.path(path_data, "figures")
+
+source(file.path(path_src, "process-data.R"))
+
+sari <- readRDS(file.path(path_processed, "sari_cum_2009_06_14_to_11_22.rds"))
+```
+
+## Convert to long format
+
+Convert data to long format and filter with observed data by the last available date.
+
+```{r}
+last_date <- max(sari$date)
+sari_long <- reporcases_longer(sari) |>
+    mutate(available_delay = floor(as.numeric(last_date - date) / 7 )) |>
+    filter(delay <= available_delay)
+```
+
+## Visualize cumulative reported cases
+
+```{r}
+p <- sari_long |>
+    ggplot() +
+    geom_line(aes(delay, cases), color = "gray30", linewidth = rel(0.4)) +
+    geom_point(aes(delay, cases), color = "gray30", size = rel(0.5)) +
+    labs(x = TeX("Delay (weeks)"), y = TeX("Cumulative reported cases")) +
+    facet_wrap(~ date, scales = "free", nrow = 4) +
+    scale_y_continuous(limits = c(0, NA)) +
+    scale_x_continuous(limits = c(0, 26), breaks = seq(0, 26, by = 5)) +
+    theme_classic(9) +
+    theme(
+        strip.background = element_blank(),
+        strip.text = element_text(face = "bold"),
+        panel.grid.major = element_line()
+    )
+p
+ggsave(file.path(path_figures, "sari_reported_cases.png"), p,
+       width = 8, height = 5, dpi = 300)
+```
+
+
+## Time to execute the task
+
+Only useful when executed with `Rscript`.
+
+```{r}
+proc.time()
+```
+

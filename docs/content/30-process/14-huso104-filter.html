@@ -27,8 +27,6 @@ path_data &lt;- file.path(path_proj, &quot;data&quot;)
 path_cleaned &lt;- file.path(path_data, &quot;cleaned&quot;)
 path_processed &lt;- file.path(path_data, &quot;processed&quot;)
 
-source(file.path(path_src, &quot;process-data.R&quot;))
-
 huso &lt;- path_cleaned |&gt;
     file.path(&quot;husO104_tri_cumu.csv&quot;) |&gt;
     readr::read_csv() |&gt;
@@ -62,5 +60,5 @@ huso &lt;- huso |&gt;
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   0.621   0.313   0.615</code></pre>
+#&gt;   0.619   0.318   0.616</code></pre>
 </div>

@@ -28,8 +28,6 @@ path_data &lt;- file.path(path_proj, &quot;data&quot;)
 path_cleaned &lt;- file.path(path_data, &quot;cleaned&quot;)
 path_processed &lt;- file.path(path_data, &quot;processed&quot;)
 
-source(file.path(path_src, &quot;process-data.R&quot;))
-
 sari &lt;- path_cleaned |&gt;
     file.path(&quot;clean_data_srag_epiweek_delay_table_PR.csv&quot;) |&gt;
     readr::read_csv()</code></pre>
@@ -88,5 +86,5 @@ sari_41002</code></pre>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   0.722   0.326   0.687</code></pre>
+#&gt;   0.700   0.356   0.694</code></pre>
 </div>

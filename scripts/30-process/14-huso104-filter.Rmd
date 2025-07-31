@@ -25,8 +25,6 @@ path_data <- file.path(path_proj, "data")
 path_cleaned <- file.path(path_data, "cleaned")
 path_processed <- file.path(path_data, "processed")
 
-source(file.path(path_src, "process-data.R"))
-
 huso <- path_cleaned |>
     file.path("husO104_tri_cumu.csv") |>
     readr::read_csv() |>
