@@ -1,9 +1,9 @@
 ---
-title: "Exploratory analysis of SARI reported cases"
+title: "Exploratory analysis of HusO104 hospitalizations"
 prerequisites:
-    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+    - data/processed/huso104_cum_2011_05_12_to_06_06.rds
 targets:
-    - data/figures/sari_reported_cases.png
+    - data/figures/huso104_reported_cases.png
 ---
 
 
@@ -33,26 +33,27 @@ path_figures &lt;- file.path(path_data, &quot;figures&quot;)
 source(file.path(path_src, &quot;process-data.R&quot;))
 source(file.path(path_src, &quot;explore-data.R&quot;))
 
-sari &lt;- readRDS(file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))</code></pre>
+huso &lt;- readRDS(file.path(path_processed, &quot;huso104_cum_2011_05_12_to_06_06.rds&quot;))</code></pre>
 </div>
 <div id="convert-to-long-format" class="section level2">
 <h2>Convert to long format</h2>
 <p>Convert data to long format and filter with observed data by the last available date.</p>
-<pre class="r"><code>last_date &lt;- max(sari$date)
-sari_long &lt;- reporcases_longer(sari) |&gt;
-    mutate(available_delay = floor(as.numeric(last_date - date) / 7 )) |&gt;
+<pre class="r"><code>last_date &lt;- max(huso$date)
+huso_long &lt;- reporcases_longer(huso) |&gt;
+    mutate(available_delay = as.numeric(last_date - date)) |&gt;
     filter(delay &lt;= available_delay)</code></pre>
 </div>
 <div id="visualize-cumulative-reported-cases" class="section level2">
 <h2>Visualize cumulative reported cases</h2>
-<pre class="r"><code>p &lt;- plot_reported(sari_long, maxdelay = 26) +
-    labs(x = TeX(&quot;Delay (weeks)&quot;))
+<pre class="r"><code>p &lt;- plot_reported(huso_long, maxdelay = 15) +
+    facet_wrap(~ date, scales = &quot;free_y&quot;, nrow = 5) +
+    labs(x = TeX(&quot;Delay (days)&quot;))
 p</code></pre>
 <pre><code>#&gt; `geom_line()`: Each group consists of only one observation.
 #&gt; ℹ Do you need to adjust the group aesthetic?</code></pre>
-<p><img src="/parametric-nowcasting/40-explore/12-sari-reported-cases_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /></p>
-<pre class="r"><code>ggsave(file.path(path_figures, &quot;sari_reported_cases.png&quot;), p,
-       width = 8, height = 4.5, dpi = 300)</code></pre>
+<p><img src="/parametric-nowcasting/40-explore/14-huso104-reported-cases_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggsave(file.path(path_figures, &quot;huso104_reported_cases.png&quot;), p,
+       width = 8, height = 5, dpi = 300)</code></pre>
 <pre><code>#&gt; `geom_line()`: Each group consists of only one observation.
 #&gt; ℹ Do you need to adjust the group aesthetic?</code></pre>
 </div>
@@ -61,5 +62,5 @@ p</code></pre>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   2.379   0.325   2.392</code></pre>
+#&gt;   2.644   0.328   2.661</code></pre>
 </div>
