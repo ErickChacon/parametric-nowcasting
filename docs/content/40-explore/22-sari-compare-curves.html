@@ -1,0 +1,136 @@
+---
+title: "SARI: Compare growth curves"
+prerequisites:
+    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+targets:
+    - data/figures/sari_qd_comparison.png
+---
+
+
+
+<div id="load-packages-scripts-and-data" class="section level2">
+<h2>Load packages, scripts and data</h2>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>#&gt; 
+#&gt; Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:stats&#39;:
+#&gt; 
+#&gt;     filter, lag</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:base&#39;:
+#&gt; 
+#&gt;     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)
+library(ggplot2)
+library(latex2exp)
+
+path_proj &lt;- here::here()
+path_src &lt;- file.path(path_proj, &quot;src&quot;)
+path_data &lt;- file.path(path_proj, &quot;data&quot;)
+path_cleaned &lt;- file.path(path_data, &quot;cleaned&quot;)
+path_processed &lt;- file.path(path_data, &quot;processed&quot;)
+path_figures &lt;- file.path(path_data, &quot;figures&quot;)
+
+source(file.path(path_src, &quot;process-data.R&quot;))
+source(file.path(path_src, &quot;explore-data.R&quot;))
+
+sari &lt;- readRDS(file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))</code></pre>
+</div>
+<div id="convert-to-long-format" class="section level2">
+<h2>Convert to long format</h2>
+<p>Convert data to long format and filter with observed data by the last available date.</p>
+<pre class="r"><code>last_date &lt;- max(sari$date)
+sari_long &lt;- sari |&gt;
+    select(-starts_with(&quot;notifications&quot;)) |&gt;
+    reporcases_longer() |&gt;
+    mutate(available_delay = floor(as.numeric(last_date - date) / 7 )) |&gt;
+    filter(delay &lt;= available_delay)</code></pre>
+</div>
+<div id="fit-exponential-and-gompertz-curves" class="section level2">
+<h2>Fit Exponential and Gompertz curves</h2>
+<p>We will compare the exponential and Gompertz growth curves assuming a time-invariant
+reporting probability in the period of time between <code>2009-07-19</code> and <code>2009-09-06</code>.</p>
+<pre class="r"><code># prepare the data to train
+somedates &lt;- seq(as.Date(&quot;2009-07-19&quot;), as.Date(&quot;2009-09-06&quot;), &quot;1 week&quot;)
+df_train &lt;- filter(sari_long, date %in% somedates) |&gt;
+    mutate(date = factor(date))
+df_fit &lt;- data.frame(delay = seq(0, max(df_train$delay), length = 100))
+
+# initial values
+max_cases &lt;- group_by(df_train, date) |&gt;
+    summarise(cases = max(cases)) |&gt;
+    pull(cases)
+
+# fit models
+mod_gomp &lt;- nls(
+    cases ~ exp(logN[date]) * exp(logphi*exp(-b * delay)),
+    data = df_train,
+    start = list(b = 0.5, logphi = log(0.05), logN = log(max_cases))
+)
+mod_exp &lt;- nls(
+    cases ~ exp(logN[date]) * (1 - (1 - plogis(logitphi))* exp(-b * delay)),
+    data = df_train,
+    start = list(b = 0.5, logitphi = qlogis(0.1), logN = log(max_cases))
+)
+
+# summarise
+list(Exponential = mod_exp, Gompertz = mod_gomp) |&gt;
+    sapply(function(x) c(AIC = AIC(x), BIC = BIC(x), SSE = deviance(x))) |&gt;
+    data.frame()</code></pre>
+<pre><code>#&gt;     Exponential   Gompertz
+#&gt; AIC    1224.285   1260.084
+#&gt; BIC    1255.308   1291.107
+#&gt; SSE  117977.984 157464.601</code></pre>
+</div>
+<div id="visualize-standardised-fitted-curves" class="section level2">
+<h2>Visualize standardised fitted curves</h2>
+<p>Let’s obtain the curves with the estimated parameter for each model.</p>
+<pre class="r"><code># predict
+df_train &lt;- df_train |&gt;
+    mutate(gomp_total = exp(coef(mod_gomp)[-(1:2)])[as.integer(df_train$date)],
+           gomp_q = cases / gomp_total,
+           exp_total = exp(coef(mod_exp)[-(1:2)])[as.integer(df_train$date)],
+           exp_q = cases / exp_total
+    ) |&gt;
+    pivot_longer(gomp_total:exp_q, names_to = c(&quot;model&quot;, &quot;var&quot;), names_pattern = &quot;(.*)_(.*)&quot;) |&gt;
+    pivot_wider(names_from = var, values_from = value)
+
+df_fit &lt;- df_fit |&gt;
+    mutate(gomp_q = exp(coef(mod_gomp)[&quot;logphi&quot;] * exp(-coef(mod_gomp)[&quot;b&quot;] * delay)),
+           exp_q = 1 - (1 - plogis(coef(mod_exp)[&quot;logitphi&quot;])) * exp(-coef(mod_exp)[&quot;b&quot;] * delay)
+    ) |&gt;
+    pivot_longer(gomp_q:exp_q, names_to = c(&quot;model&quot;), values_to = &quot;q&quot;,
+                 names_transform = function(x) sub(&quot;_q&quot;, &quot;&quot;, x)
+    )</code></pre>
+<p>Visualize the estimated theoretical curves using the exponential and Gompertz models.</p>
+<pre class="r"><code>mylabs &lt;- c(&quot;exp&quot; = &quot;(a) Exponential&quot;, &quot;gomp&quot; = &quot;(b) Gompertz&quot;)
+
+p &lt;- ggplot(df_train) +
+    geom_line(aes(delay, q, group = date), color = &quot;gray&quot;, linewidth = rel(0.3)) +
+    geom_point(aes(delay, q, group = date, color = &quot;Empirical&quot;), size = rel(0.5)) +
+    geom_line(aes(delay, q, color = &quot;Theoretical&quot;), df_fit, linewidth = rel(0.5),
+              linetype = &quot;dashed&quot;) +
+    labs(title = NULL, y = TeX(&quot;$q(d)$&quot;), x = TeX(&quot;$d$&quot;), color = NULL) +
+    facet_wrap(~ model, scales = &quot;free&quot;, labeller = as_labeller(mylabs)) +
+    theme_classic(9) +
+    scale_colour_manual(values = c(&quot;gray30&quot;, &quot;red&quot;)) +
+    theme(
+        legend.position = c(0.9, 0.15),
+        strip.background = element_blank(),
+        strip.text = element_text(face = &quot;bold&quot;)
+    )</code></pre>
+<pre><code>#&gt; Warning: A numeric `legend.position` argument in `theme()` was deprecated in ggplot2 3.5.0.
+#&gt; ℹ Please use the `legend.position.inside` argument of `theme()` instead.
+#&gt; This warning is displayed once every 8 hours.
+#&gt; Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.</code></pre>
+<pre class="r"><code>p</code></pre>
+<p><img src="/parametric-nowcasting/40-explore/22-sari-compare-curves_files/figure-html/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggsave(file.path(path_figures, &quot;sari_qd_comparison.png&quot;), p,
+       width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)</code></pre>
+</div>
+<div id="time-to-execute-the-task" class="section level2">
+<h2>Time to execute the task</h2>
+<p>Only useful when executed with <code>Rscript</code>.</p>
+<pre class="r"><code>proc.time()</code></pre>
+<pre><code>#&gt;    user  system elapsed 
+#&gt;   1.174   0.312   1.167</code></pre>
+</div>
