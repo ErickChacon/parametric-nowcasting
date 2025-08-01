@@ -70,11 +70,13 @@ mod_gomp <- nls(
     data = df_train,
     start = list(b = 0.5, logphi = log(0.05), logN = log(max_cases))
 )
+mod_gomp
 mod_exp <- nls(
     cases ~ exp(logN[date]) * (1 - (1 - plogis(logitphi))* exp(-b * delay)),
     data = df_train,
     start = list(b = 0.5, logitphi = qlogis(0.1), logN = log(max_cases))
 )
+mod_exp
 
 # summarise
 list(Exponential = mod_exp, Gompertz = mod_gomp) |>

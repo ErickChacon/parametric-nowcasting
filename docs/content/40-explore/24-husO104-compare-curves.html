@@ -65,13 +65,32 @@ mod_gomp &lt;- nls(
     data = df_train,
     start = list(b = 0.5, logphi = log(0.05), logN = log(max_cases))
 )
-mod_exp &lt;- nls(
+mod_gomp</code></pre>
+<pre><code>#&gt; Nonlinear regression model
+#&gt;   model: cases ~ exp(logN[date]) * exp(logphi * exp(-b * delay))
+#&gt;    data: df_train
+#&gt;       b  logphi   logN1   logN2   logN3   logN4   logN5   logN6   logN7   logN8 
+#&gt;  0.3302 -4.4608  3.4006  4.0993  3.7603  3.5291  3.8183  3.7159  3.5416  3.4275 
+#&gt;  residual sum-of-squares: 1035
+#&gt; 
+#&gt; Number of iterations to convergence: 7 
+#&gt; Achieved convergence tolerance: 2.762e-06</code></pre>
+<pre class="r"><code>mod_exp &lt;- nls(
     cases ~ exp(logN[date]) * (1 - exp(-b * delay)),
     data = df_train,
     start = list(b = 0.5, logN = log(max_cases))
 )
-
-# summarise
+mod_exp</code></pre>
+<pre><code>#&gt; Nonlinear regression model
+#&gt;   model: cases ~ exp(logN[date]) * (1 - exp(-b * delay))
+#&gt;    data: df_train
+#&gt;       b   logN1   logN2   logN3   logN4   logN5   logN6   logN7   logN8 
+#&gt; 0.04132 4.24191 4.93657 4.59965 4.39141 4.69686 4.60684 4.44220 4.32496 
+#&gt;  residual sum-of-squares: 1481
+#&gt; 
+#&gt; Number of iterations to convergence: 10 
+#&gt; Achieved convergence tolerance: 2.828e-06</code></pre>
+<pre class="r"><code># summarise
 list(Exponential = mod_exp, Gompertz = mod_gomp) |&gt;
     sapply(function(x) c(AIC = AIC(x), BIC = BIC(x), SSE = deviance(x))) |&gt;
     data.frame()</code></pre>
@@ -111,5 +130,5 @@ p</code></pre>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   1.106   0.333   1.122</code></pre>
+#&gt;   1.114   0.309   1.104</code></pre>
 </div>

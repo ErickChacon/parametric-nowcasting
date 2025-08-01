@@ -49,6 +49,7 @@ plot_compare_curves <- function(df_train, df_fit,
         facet_wrap(~ model, scales = "free", labeller = as_labeller(mylabs)) +
         theme_classic(9) +
         scale_alpha_manual(values = c(1, 1)) +
+        scale_y_continuous(limits = c(0, NA)) +
         theme(
             legend.position = "inside",
             legend.position.inside = c(0.9, 0.15),
