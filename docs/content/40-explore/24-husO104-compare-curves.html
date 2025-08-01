@@ -1,9 +1,9 @@
 ---
-title: "SARI: Compare growth curves"
+title: "HusO104: Compare growth curves"
 prerequisites:
-    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+    - data/processed/huso104_cum_2011_05_12_to_06_06.rds
 targets:
-    - data/figures/sari_qd_comparison.png
+    - data/figures/huso104_qd_comparison.png
 ---
 
 
@@ -33,16 +33,15 @@ path_figures &lt;- file.path(path_data, &quot;figures&quot;)
 source(file.path(path_src, &quot;20-processing.R&quot;))
 source(file.path(path_src, &quot;30-eda.R&quot;))
 
-sari &lt;- readRDS(file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))</code></pre>
+huso &lt;- readRDS(file.path(path_processed, &quot;huso104_cum_2011_05_12_to_06_06.rds&quot;))</code></pre>
 </div>
 <div id="convert-to-long-format" class="section level2">
 <h2>Convert to long format</h2>
 <p>Convert data to long format and filter with observed data by the last available date.</p>
-<pre class="r"><code>last_date &lt;- max(sari$date)
-sari_long &lt;- sari |&gt;
-    select(-starts_with(&quot;notifications&quot;)) |&gt;
+<pre class="r"><code>last_date &lt;- max(huso$date)
+huso_long &lt;- huso |&gt;
     reporcases_longer() |&gt;
-    mutate(available_delay = floor(as.numeric(last_date - date) / 7 )) |&gt;
+    mutate(available_delay = as.numeric(last_date - date)) |&gt;
     filter(delay &lt;= available_delay)</code></pre>
 </div>
 <div id="fit-exponential-and-gompertz-curves" class="section level2">
@@ -50,8 +49,8 @@ sari_long &lt;- sari |&gt;
 <p>We will compare the exponential and Gompertz growth curves assuming a time-invariant
 reporting probability in the period of time between <code>2009-07-19</code> and <code>2009-09-06</code>.</p>
 <pre class="r"><code># prepare the data to train
-somedates &lt;- seq(as.Date(&quot;2009-07-19&quot;), as.Date(&quot;2009-09-06&quot;), &quot;1 week&quot;)
-df_train &lt;- filter(sari_long, date %in% somedates) |&gt;
+somedates &lt;- seq(as.Date(&quot;2011-05-20&quot;), as.Date(&quot;2011-05-27&quot;), &quot;1 day&quot;)
+df_train &lt;- filter(huso_long, date %in% somedates) |&gt;
     mutate(date = factor(date))
 df_fit &lt;- data.frame(delay = seq(0, max(df_train$delay), length = 100))
 
@@ -67,19 +66,19 @@ mod_gomp &lt;- nls(
     start = list(b = 0.5, logphi = log(0.05), logN = log(max_cases))
 )
 mod_exp &lt;- nls(
-    cases ~ exp(logN[date]) * (1 - (1 - plogis(logitphi))* exp(-b * delay)),
+    cases ~ exp(logN[date]) * (1 - exp(-b * delay)),
     data = df_train,
-    start = list(b = 0.5, logitphi = qlogis(0.1), logN = log(max_cases))
+    start = list(b = 0.5, logN = log(max_cases))
 )
 
 # summarise
 list(Exponential = mod_exp, Gompertz = mod_gomp) |&gt;
     sapply(function(x) c(AIC = AIC(x), BIC = BIC(x), SSE = deviance(x))) |&gt;
     data.frame()</code></pre>
-<pre><code>#&gt;     Exponential   Gompertz
-#&gt; AIC    1224.285   1260.084
-#&gt; BIC    1255.308   1291.107
-#&gt; SSE  117977.984 157464.601</code></pre>
+<pre><code>#&gt;     Exponential  Gompertz
+#&gt; AIC    631.4156  592.9796
+#&gt; BIC    658.6895  622.9809
+#&gt; SSE   1480.6971 1035.2804</code></pre>
 </div>
 <div id="visualize-standardised-fitted-curves" class="section level2">
 <h2>Visualize standardised fitted curves</h2>
@@ -96,21 +95,21 @@ df_train &lt;- df_train |&gt;
 
 df_fit &lt;- df_fit |&gt;
     mutate(gomp_q = qgom(exp(coef(mod_gomp)[&quot;logphi&quot;]), coef(mod_gomp)[&quot;b&quot;])(delay),
-           exp_q = qexp(plogis(coef(mod_exp)[&quot;logitphi&quot;]), coef(mod_exp)[&quot;b&quot;])(delay)) |&gt;
+           exp_q = qexp(0, coef(mod_exp)[&quot;b&quot;])(delay)) |&gt;
     pivot_longer(gomp_q:exp_q, names_to = c(&quot;model&quot;), values_to = &quot;q&quot;,
                  names_transform = function(x) sub(&quot;_q&quot;, &quot;&quot;, x))</code></pre>
 <p>Visualize the estimated theoretical curves using the exponential and Gompertz models.</p>
 <pre class="r"><code>mylabs &lt;- c(&quot;exp&quot; = &quot;(a) Exponential&quot;, &quot;gomp&quot; = &quot;(b) Gompertz&quot;)
 p &lt;- plot_compare_curves(df_train, df_fit, mylabs)
 p</code></pre>
-<p><img src="/parametric-nowcasting/40-explore/22-sari-compare-curves_files/figure-html/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
-<pre class="r"><code>ggsave(file.path(path_figures, &quot;sari_qd_comparison.png&quot;), p,
-       width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)</code></pre>
+<p><img src="/parametric-nowcasting/40-explore/24-husO104-compare-curves_files/figure-html/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggsave(file.path(path_figures, &quot;huso104_qd_comparison.png&quot;), p,
+      width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)</code></pre>
 </div>
 <div id="time-to-execute-the-task" class="section level2">
 <h2>Time to execute the task</h2>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   1.217   0.314   1.221</code></pre>
+#&gt;   1.123   0.332   1.137</code></pre>
 </div>

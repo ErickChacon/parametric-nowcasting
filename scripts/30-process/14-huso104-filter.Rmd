@@ -28,6 +28,7 @@ path_processed <- file.path(path_data, "processed")
 huso <- path_cleaned |>
     file.path("husO104_tri_cumu.csv") |>
     readr::read_csv() |>
+    as_tibble() |>
     rename(date = `...1`)
 ```
 
@@ -38,7 +39,8 @@ huso <- path_cleaned |>
 ```{r}
 date_period <- as.Date(c("2011-05-12", "2011-06-06"))
 huso <- huso |>
-    filter(date >= date_period[1], date <= date_period[2])
+    filter(date >= date_period[1], date <= date_period[2]) |>
+    as_tibble()
 ```
 
 ## Save processed data

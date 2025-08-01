@@ -1,113 +1,122 @@
 ---
-title: "Exploratory analysis hus0104"
-output: html_document
-makefile: false
+title: "HusO104: Compare growth curves"
+prerequisites:
+    - data/processed/huso104_cum_2011_05_12_to_06_06.rds
+targets:
+    - data/figures/huso104_qd_comparison.png
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center")
+knitr::opts_chunk$set(fig.height = 6, fig.width = 8, out.width = "100%")
+knitr::opts_chunk$set(comment = "#>")
+options(width = 100)
 ```
 
-## Load packages and data
+## Load packages, scripts and data
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
-
-library(splines)
-library(ggplot2)
-library(reshape2)
+```{r}
 library(dplyr)
 library(tidyr)
+library(ggplot2)
 library(latex2exp)
 
 path_proj <- here::here()
-path_source <- file.path(path_proj, "source")
+path_src <- file.path(path_proj, "src")
+path_data <- file.path(path_proj, "data")
+path_cleaned <- file.path(path_data, "cleaned")
+path_processed <- file.path(path_data, "processed")
+path_figures <- file.path(path_data, "figures")
 
-husO104 <- read.csv(file.path(path_proj, "data", "cleaned", "husO104_tri_cumu.csv"),)
+source(file.path(path_src, "20-processing.R"))
+source(file.path(path_src, "30-eda.R"))
+
+huso <- readRDS(file.path(path_processed, "huso104_cum_2011_05_12_to_06_06.rds"))
 ```
 
-## Filter dates of interest
+## Convert to long format
+
+Convert data to long format and filter with observed data by the last available date.
 
 ```{r}
-husO104 <- husO104 |>
-    mutate(date = as.Date(X)) |>
-    select(-X)
-
-date_range <- as.Date(c("2011-05-12", "2011-06-07"))
-
-husO104_input <- husO104 |>
-    filter(date >= date_range[1] & date <= date_range[2])
-# |>
-#     tibble::column_to_rownames('date') |>
-#     as.matrix()
-# set_week_start("Sunday")
-
-df <- husO104_input |>
-    pivot_longer(starts_with("delay"), names_to = "delay", values_to = "cases",
-                 names_transform = function(x) as.numeric(sub("delay", "", x))) |>
-    mutate(available_delay = as.numeric(date_range[2] - date)) |>
+last_date <- max(huso$date)
+huso_long <- huso |>
+    reporcases_longer() |>
+    mutate(available_delay = as.numeric(last_date - date)) |>
     filter(delay <= available_delay)
 ```
 
 ## Fit Exponential and Gompertz curves
 
+We will compare the exponential and Gompertz growth curves assuming a time-invariant
+reporting probability in the period of time between `2009-07-19` and `2009-09-06`.
+
 ```{r}
-# prepare data
+# prepare the data to train
 somedates <- seq(as.Date("2011-05-20"), as.Date("2011-05-27"), "1 day")
-# somedates <- seq(as.Date("2011-05-22"), as.Date("2011-05-22"), "1 day")
-df_check <- filter(df, date %in% somedates) |>
+df_train <- filter(huso_long, date %in% somedates) |>
     mutate(date = factor(date))
-df_fit <- data.frame(delay = seq(0, 15, length = 100))
+df_fit <- data.frame(delay = seq(0, max(df_train$delay), length = 100))
 
-# models
-mod_gomp <- nls(cases ~ exp(logN[date]) * exp(logphi*exp(-b * delay)), data = df_check,
-    start = list(b = 0.1, logphi = log(0.01), logN = rep(log(50), length(unique(df_check$date)))))
-mod_exp <- nls(cases ~ exp(logN[date]) * (1 - exp(-b * delay)), data = df_check,
-    start = list(b = 0.5, logN = rep(log(50), length(unique(df_check$date)))))
+# initial values
+max_cases <- group_by(df_train, date) |>
+    summarise(cases = max(cases)) |>
+    pull(cases)
 
-sapply(list(Exponential = mod_exp, Gompertz = mod_gomp),
-       function(x) c(AIC = AIC(x), BIC = BIC(x), SSE = deviance(x))) |>
+# fit models
+mod_gomp <- nls(
+    cases ~ exp(logN[date]) * exp(logphi*exp(-b * delay)),
+    data = df_train,
+    start = list(b = 0.5, logphi = log(0.05), logN = log(max_cases))
+)
+mod_exp <- nls(
+    cases ~ exp(logN[date]) * (1 - exp(-b * delay)),
+    data = df_train,
+    start = list(b = 0.5, logN = log(max_cases))
+)
+
+# summarise
+list(Exponential = mod_exp, Gompertz = mod_gomp) |>
+    sapply(function(x) c(AIC = AIC(x), BIC = BIC(x), SSE = deviance(x))) |>
     data.frame()
+```
 
-#     Exponential  Gompertz
-# AIC    660.5158  626.3501
-# BIC    688.2227  656.8277
-# SSE   1573.2639 1157.9643
+## Visualize standardised fitted curves
+
+Let's obtain the curves with the estimated parameter for each model.
+
+```{r}
+logns <- paste0("logN", 1:nlevels(df_train$date))
 
 # predict
-df_check <- df_check |>
-    mutate(gomp_total = exp(coef(mod_gomp)[-(1:2)])[as.integer(df_check$date)],
-           gomp_q = cases / gomp_total,
-           exp_total = exp(coef(mod_exp)[-(1)])[as.integer(df_check$date)],
-           exp_q = cases / exp_total
-    ) |>
-    pivot_longer(gomp_total:exp_q, names_to = c("model", "var"), names_pattern = "(.*)_(.*)") |>
+df_train <- df_train |>
+    mutate(gomp_total = exp(coef(mod_gomp)[logns])[date], gomp_q = cases / gomp_total,
+           exp_total = exp(coef(mod_exp)[logns])[date], exp_q = cases / exp_total) |>
+    pivot_longer(gomp_total:exp_q, names_to = c("model", "var"),
+                 names_pattern = "(.*)_(.*)") |>
     pivot_wider(names_from = var, values_from = value)
 
 df_fit <- df_fit |>
-    mutate(gomp_q = exp(coef(mod_gomp)["logphi"] * exp(-coef(mod_gomp)["b"] * delay)),
-           exp_q = 1 - exp(-coef(mod_exp)["b"] * delay)
-    ) |>
+    mutate(gomp_q = qgom(exp(coef(mod_gomp)["logphi"]), coef(mod_gomp)["b"])(delay),
+           exp_q = qexp(0, coef(mod_exp)["b"])(delay)) |>
     pivot_longer(gomp_q:exp_q, names_to = c("model"), values_to = "q",
-                 names_transform = function(x) sub("_q", "", x)
-    )
+                 names_transform = function(x) sub("_q", "", x))
+```
 
-# visualize
+Visualize the estimated theoretical curves using the exponential and Gompertz models.
+
+```{r, fig.height = 3.2}
 mylabs <- c("exp" = "(a) Exponential", "gomp" = "(b) Gompertz")
-p <- ggplot(df_check) +
-    geom_line(aes(delay, q, group = date), color = "gray", linewidth = rel(0.3)) +
-    geom_point(aes(delay, q, group = date, color = "Empirical"), size = rel(0.5)) +
-    geom_line(aes(delay, q, color = "Theoretical"), df_fit, linewidth = rel(0.5), linetype = "dashed") +
-    labs(title = NULL, y = TeX("$q(d)$"), x = TeX("$d$"), color = NULL) +
-    facet_wrap(~ model, scales = "free", labeller = as_labeller(mylabs)) +
-    theme_classic(9) +
-    scale_colour_manual(values = c("gray30", "red")) +
-    theme(
-        legend.position = c(0.9, 0.15),
-        strip.background = element_blank(),
-        strip.text = element_text(face = "bold")
-    )
-ggsave(filename = file.path(path_proj, "plots_to_show", "qd_emp_fit_husO104.png"),
-       plot = p,
-       width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)
+p <- plot_compare_curves(df_train, df_fit, mylabs)
+p
+ggsave(file.path(path_figures, "huso104_qd_comparison.png"), p,
+      width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)
+```
+
+## Time to execute the task
+
+Only useful when executed with `Rscript`.
+
+```{r}
+proc.time()
 ```

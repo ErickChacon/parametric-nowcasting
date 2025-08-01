@@ -30,11 +30,12 @@ path_processed &lt;- file.path(path_data, &quot;processed&quot;)
 huso &lt;- path_cleaned |&gt;
     file.path(&quot;husO104_tri_cumu.csv&quot;) |&gt;
     readr::read_csv() |&gt;
+    as_tibble() |&gt;
     rename(date = `...1`)</code></pre>
 <pre><code>#&gt; New names:
 #&gt; • `` -&gt; `...1`</code></pre>
 <pre><code>#&gt; Rows: 59 Columns: 17
-#&gt; ── Column specification ────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+#&gt; ── Column specification ──────────────────────────────────────────────────────────────────────
 #&gt; Delimiter: &quot;,&quot;
 #&gt; dbl  (16): delay0, delay1, delay2, delay3, delay4, delay5, delay6, delay7, delay8, delay9, delay...
 #&gt; date  (1): ...1
@@ -49,7 +50,8 @@ huso &lt;- path_cleaned |&gt;
 </ul>
 <pre class="r"><code>date_period &lt;- as.Date(c(&quot;2011-05-12&quot;, &quot;2011-06-06&quot;))
 huso &lt;- huso |&gt;
-    filter(date &gt;= date_period[1], date &lt;= date_period[2])</code></pre>
+    filter(date &gt;= date_period[1], date &lt;= date_period[2]) |&gt;
+    as_tibble()</code></pre>
 </div>
 <div id="save-processed-data" class="section level2">
 <h2>Save processed data</h2>
@@ -60,5 +62,5 @@ huso &lt;- huso |&gt;
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   0.610   0.316   0.604</code></pre>
+#&gt;   0.582   0.320   0.580</code></pre>
 </div>
