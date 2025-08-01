@@ -33,6 +33,7 @@ path_figures &lt;- file.path(path_data, &quot;figures&quot;)
 source(file.path(path_src, &quot;process-data.R&quot;))
 source(file.path(path_src, &quot;explore-data.R&quot;))
 source(file.path(path_src, &quot;visualize-curves.R&quot;))
+source(file.path(path_src, &quot;model-qfuns.R&quot;))
 
 sari &lt;- readRDS(file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))</code></pre>
 </div>
@@ -85,26 +86,21 @@ list(Exponential = mod_exp, Gompertz = mod_gomp) |&gt;
 <div id="visualize-standardised-fitted-curves" class="section level2">
 <h2>Visualize standardised fitted curves</h2>
 <p>Let’s obtain the curves with the estimated parameter for each model.</p>
-<pre class="r"><code>ntimes &lt;- nlevels(df_train$date)
-names_lambda &lt;- paste0(&quot;logN&quot;, 1:ntimes)
+<pre class="r"><code>logns &lt;- paste0(&quot;logN&quot;, 1:nlevels(df_train$date))
 
 # predict
 df_train &lt;- df_train |&gt;
-    mutate(gomp_total = exp(coef(mod_gomp)[names_lambda])[date],
-           gomp_q = cases / gomp_total,
-           exp_total = exp(coef(mod_exp)[names_lambda])[date],
-           exp_q = cases / exp_total
-    ) |&gt;
-    pivot_longer(gomp_total:exp_q, names_to = c(&quot;model&quot;, &quot;var&quot;), names_pattern = &quot;(.*)_(.*)&quot;) |&gt;
+    mutate(gomp_total = exp(coef(mod_gomp)[logns])[date], gomp_q = cases / gomp_total,
+           exp_total = exp(coef(mod_exp)[logns])[date], exp_q = cases / exp_total) |&gt;
+    pivot_longer(gomp_total:exp_q, names_to = c(&quot;model&quot;, &quot;var&quot;),
+                 names_pattern = &quot;(.*)_(.*)&quot;) |&gt;
     pivot_wider(names_from = var, values_from = value)
 
 df_fit &lt;- df_fit |&gt;
-    mutate(gomp_q = exp(coef(mod_gomp)[&quot;logphi&quot;] * exp(-coef(mod_gomp)[&quot;b&quot;] * delay)),
-           exp_q = 1 - (1 - plogis(coef(mod_exp)[&quot;logitphi&quot;])) * exp(-coef(mod_exp)[&quot;b&quot;] * delay)
-    ) |&gt;
+    mutate(gomp_q = qgom(exp(coef(mod_gomp)[&quot;logphi&quot;]), coef(mod_gomp)[&quot;b&quot;])(delay),
+           exp_q = qexp(plogis(coef(mod_exp)[&quot;logitphi&quot;]), coef(mod_exp)[&quot;b&quot;])(delay)) |&gt;
     pivot_longer(gomp_q:exp_q, names_to = c(&quot;model&quot;), values_to = &quot;q&quot;,
-                 names_transform = function(x) sub(&quot;_q&quot;, &quot;&quot;, x)
-    )</code></pre>
+                 names_transform = function(x) sub(&quot;_q&quot;, &quot;&quot;, x))</code></pre>
 <p>Visualize the estimated theoretical curves using the exponential and Gompertz models.</p>
 <pre class="r"><code>mylabs &lt;- c(&quot;exp&quot; = &quot;(a) Exponential&quot;, &quot;gomp&quot; = &quot;(b) Gompertz&quot;)
 p &lt;- plot_compare_curves(df_train, df_fit, mylabs)</code></pre>
@@ -112,6 +108,8 @@ p &lt;- plot_compare_curves(df_train, df_fit, mylabs)</code></pre>
 #&gt; ℹ Please use the `legend.position.inside` argument of `theme()` instead.
 #&gt; This warning is displayed once every 8 hours.
 #&gt; Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.</code></pre>
+<pre class="r"><code>p</code></pre>
+<p><img src="/parametric-nowcasting/40-explore/22-sari-compare-curves_files/figure-html/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>ggsave(file.path(path_figures, &quot;sari_qd_comparison.png&quot;), p,
        width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)</code></pre>
 </div>
@@ -120,5 +118,5 @@ p &lt;- plot_compare_curves(df_train, df_fit, mylabs)</code></pre>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   0.902   0.326   0.911</code></pre>
+#&gt;   1.169   0.311   1.162</code></pre>
 </div>

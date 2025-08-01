@@ -31,6 +31,7 @@ path_figures <- file.path(path_data, "figures")
 source(file.path(path_src, "process-data.R"))
 source(file.path(path_src, "explore-data.R"))
 source(file.path(path_src, "visualize-curves.R"))
+source(file.path(path_src, "model-qfuns.R"))
 
 sari <- readRDS(file.path(path_processed, "sari_cum_2009_06_14_to_11_22.rds"))
 ```
@@ -88,26 +89,21 @@ list(Exponential = mod_exp, Gompertz = mod_gomp) |>
 Let's obtain the curves with the estimated parameter for each model.
 
 ```{r}
-ntimes <- nlevels(df_train$date)
-names_lambda <- paste0("logN", 1:ntimes)
+logns <- paste0("logN", 1:nlevels(df_train$date))
 
 # predict
 df_train <- df_train |>
-    mutate(gomp_total = exp(coef(mod_gomp)[names_lambda])[date],
-           gomp_q = cases / gomp_total,
-           exp_total = exp(coef(mod_exp)[names_lambda])[date],
-           exp_q = cases / exp_total
-    ) |>
-    pivot_longer(gomp_total:exp_q, names_to = c("model", "var"), names_pattern = "(.*)_(.*)") |>
+    mutate(gomp_total = exp(coef(mod_gomp)[logns])[date], gomp_q = cases / gomp_total,
+           exp_total = exp(coef(mod_exp)[logns])[date], exp_q = cases / exp_total) |>
+    pivot_longer(gomp_total:exp_q, names_to = c("model", "var"),
+                 names_pattern = "(.*)_(.*)") |>
     pivot_wider(names_from = var, values_from = value)
 
 df_fit <- df_fit |>
-    mutate(gomp_q = exp(coef(mod_gomp)["logphi"] * exp(-coef(mod_gomp)["b"] * delay)),
-           exp_q = 1 - (1 - plogis(coef(mod_exp)["logitphi"])) * exp(-coef(mod_exp)["b"] * delay)
-    ) |>
+    mutate(gomp_q = qgom(exp(coef(mod_gomp)["logphi"]), coef(mod_gomp)["b"])(delay),
+           exp_q = qexp(plogis(coef(mod_exp)["logitphi"]), coef(mod_exp)["b"])(delay)) |>
     pivot_longer(gomp_q:exp_q, names_to = c("model"), values_to = "q",
-                 names_transform = function(x) sub("_q", "", x)
-    )
+                 names_transform = function(x) sub("_q", "", x))
 ```
 
 Visualize the estimated theoretical curves using the exponential and Gompertz models.
@@ -115,6 +111,7 @@ Visualize the estimated theoretical curves using the exponential and Gompertz mo
 ```{r, fig.height = 3.2}
 mylabs <- c("exp" = "(a) Exponential", "gomp" = "(b) Gompertz")
 p <- plot_compare_curves(df_train, df_fit, mylabs)
+p
 ggsave(file.path(path_figures, "sari_qd_comparison.png"), p,
        width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)
 ```
