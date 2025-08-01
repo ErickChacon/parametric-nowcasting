@@ -41,7 +41,7 @@ plot_compare_curves <- function(df_train, df_fit,
     ggplot(df_train) +
         geom_line(aes(delay, q, group = date, alpha = "Empirical"), color = "gray80",
             linewidth = rel(0.3)) +
-        geom_point(aes(delay, q, group = date, color = "Empirical"), color = "gray30",
+        geom_point(aes(delay, q, group = date, alpha = "Empirical"), color = "gray30",
             size = rel(0.5)) +
         geom_line(aes(delay, q, alpha = "Theoretical"), color = "red", df_fit,
             linewidth = rel(0.7), linetype = "dashed") +
