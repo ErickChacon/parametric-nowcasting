@@ -14,7 +14,7 @@ target_all = docs/content/_index.html \
 	data/figures/huso104_qd_comparison.png \
 	docs/content/40-explore/24-husO104-compare-curves.html \
 	data/figures/qd_example_sari_huso104.png \
-	docs/content/40-explore/28-example-selected-curves.html
+	docs/content/40-explore/28-example-reporting-probability.html
 
 target_clean = docs/content/_index.html \
 	docs/content/30-process/_index.html \
@@ -25,7 +25,7 @@ target_clean = docs/content/_index.html \
 	docs/content/40-explore/14-huso104-reported-cases.html \
 	docs/content/40-explore/22-sari-compare-curves.html \
 	docs/content/40-explore/24-husO104-compare-curves.html \
-	docs/content/40-explore/28-example-selected-curves.html
+	docs/content/40-explore/28-example-reporting-probability.html
 
 all: $(target_all)
 
@@ -62,8 +62,8 @@ data/figures/huso104_qd_comparison.png docs/content/40-explore/24-husO104-compar
 	scripts/40-explore/24-husO104-compare-curves.Rmd \
 	data/processed/huso104_cum_2011_05_12_to_06_06.rds
 
-data/figures/qd_example_sari_huso104.png docs/content/40-explore/28-example-selected-curves.html: \
-	scripts/40-explore/28-example-selected-curves.Rmd \
+data/figures/qd_example_sari_huso104.png docs/content/40-explore/28-example-reporting-probability.html: \
+	scripts/40-explore/28-example-reporting-probability.Rmd \
 	data/processed/huso104_cum_2011_05_12_to_06_06.rds \
 	data/processed/sari_cum_2009_06_14_to_11_22.rds
 

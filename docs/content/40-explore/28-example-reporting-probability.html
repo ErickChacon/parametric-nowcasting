@@ -1,5 +1,5 @@
 ---
-title: "Fitting example of exponential and Gompertz reporting probability"
+title: "Fitting example of cumulative reporting probability"
 prerequisites:
     - data/processed/huso104_cum_2011_05_12_to_06_06.rds
     - data/processed/sari_cum_2009_06_14_to_11_22.rds
@@ -9,6 +9,8 @@ targets:
 
 
 
+<p>We show an example of how the exponential and Gompertz cumulative reporting probability
+fits real data.</p>
 <div id="load-packages-scripts-and-data" class="section level2">
 <h2>Load packages, scripts and data</h2>
 <pre class="r"><code>library(dplyr)</code></pre>
@@ -106,7 +108,7 @@ p &lt;- plot_compare_curves(df_train, df_fit, mylabs) +
 <pre><code>#&gt; Scale for y is already present.
 #&gt; Adding another scale for y, which will replace the existing scale.</code></pre>
 <pre class="r"><code>p</code></pre>
-<p><img src="/parametric-nowcasting/40-explore/28-example-selected-curves_files/figure-html/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p><img src="/parametric-nowcasting/40-explore/28-example-reporting-probability_files/figure-html/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>ggsave(file.path(path_figures, &quot;qd_example_sari_huso104.png&quot;), p,
       width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)</code></pre>
 </div>
@@ -115,5 +117,5 @@ p &lt;- plot_compare_curves(df_train, df_fit, mylabs) +
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   1.123   0.313   1.118</code></pre>
+#&gt;   1.089   0.326   1.097</code></pre>
 </div>
