@@ -30,8 +30,8 @@ path_cleaned &lt;- file.path(path_data, &quot;cleaned&quot;)
 path_processed &lt;- file.path(path_data, &quot;processed&quot;)
 path_figures &lt;- file.path(path_data, &quot;figures&quot;)
 
-source(file.path(path_src, &quot;process-data.R&quot;))
-source(file.path(path_src, &quot;explore-data.R&quot;))
+source(file.path(path_src, &quot;20-processing.R&quot;))
+source(file.path(path_src, &quot;30-eda.R&quot;))
 
 sari &lt;- readRDS(file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))</code></pre>
 </div>
@@ -61,5 +61,5 @@ p</code></pre>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   2.424   0.314   2.425</code></pre>
+#&gt;   2.345   0.338   2.368</code></pre>
 </div>

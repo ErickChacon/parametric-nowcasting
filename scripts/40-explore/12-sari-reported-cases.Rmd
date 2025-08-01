@@ -28,8 +28,8 @@ path_cleaned <- file.path(path_data, "cleaned")
 path_processed <- file.path(path_data, "processed")
 path_figures <- file.path(path_data, "figures")
 
-source(file.path(path_src, "process-data.R"))
-source(file.path(path_src, "explore-data.R"))
+source(file.path(path_src, "20-processing.R"))
+source(file.path(path_src, "30-eda.R"))
 
 sari <- readRDS(file.path(path_processed, "sari_cum_2009_06_14_to_11_22.rds"))
 ```

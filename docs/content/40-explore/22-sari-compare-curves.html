@@ -30,10 +30,13 @@ path_cleaned &lt;- file.path(path_data, &quot;cleaned&quot;)
 path_processed &lt;- file.path(path_data, &quot;processed&quot;)
 path_figures &lt;- file.path(path_data, &quot;figures&quot;)
 
-source(file.path(path_src, &quot;process-data.R&quot;))
-source(file.path(path_src, &quot;explore-data.R&quot;))
-source(file.path(path_src, &quot;visualize-curves.R&quot;))
-source(file.path(path_src, &quot;model-qfuns.R&quot;))
+# ../../src/20-processing.R
+
+source(file.path(path_src, &quot;20-processing.R&quot;))
+source(file.path(path_src, &quot;30-eda.R&quot;))
+# source(file.path(path_src, &quot;explore-data.R&quot;))
+# source(file.path(path_src, &quot;visualize-curves.R&quot;))
+# source(file.path(path_src, &quot;model-qfuns.R&quot;))
 
 sari &lt;- readRDS(file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))</code></pre>
 </div>
@@ -103,12 +106,8 @@ df_fit &lt;- df_fit |&gt;
                  names_transform = function(x) sub(&quot;_q&quot;, &quot;&quot;, x))</code></pre>
 <p>Visualize the estimated theoretical curves using the exponential and Gompertz models.</p>
 <pre class="r"><code>mylabs &lt;- c(&quot;exp&quot; = &quot;(a) Exponential&quot;, &quot;gomp&quot; = &quot;(b) Gompertz&quot;)
-p &lt;- plot_compare_curves(df_train, df_fit, mylabs)</code></pre>
-<pre><code>#&gt; Warning: A numeric `legend.position` argument in `theme()` was deprecated in ggplot2 3.5.0.
-#&gt; ℹ Please use the `legend.position.inside` argument of `theme()` instead.
-#&gt; This warning is displayed once every 8 hours.
-#&gt; Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.</code></pre>
-<pre class="r"><code>p</code></pre>
+p &lt;- plot_compare_curves(df_train, df_fit, mylabs)
+p</code></pre>
 <p><img src="/parametric-nowcasting/40-explore/22-sari-compare-curves_files/figure-html/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>ggsave(file.path(path_figures, &quot;sari_qd_comparison.png&quot;), p,
        width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)</code></pre>
@@ -118,5 +117,5 @@ p &lt;- plot_compare_curves(df_train, df_fit, mylabs)</code></pre>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   1.169   0.311   1.162</code></pre>
+#&gt;   1.114   0.305   1.100</code></pre>
 </div>

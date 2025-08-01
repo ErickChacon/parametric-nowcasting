@@ -1,5 +1,7 @@
+# Summarise results
 
-# convert delay matrix to long data.frame
+## Convert delay matrix to long data.frame
+
 matdelay_df <- function(X, dates, varname = "cases") {
     X |>
         data.frame() |>
@@ -9,6 +11,8 @@ matdelay_df <- function(X, dates, varname = "cases") {
             names_transform = function(x) as.numeric(sub("X", "", x)) - 1
         )
 }
+
+## Obtrain predicted mean
 
 predmean_nonparam <- function(model) {
     q_draws <- model$draws("q")

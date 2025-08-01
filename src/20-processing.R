@@ -1,3 +1,6 @@
+# Data processing
+
+## Convert wide dataframe of reports to long format
 
 reporcases_longer <- function (df) {
     df |>
