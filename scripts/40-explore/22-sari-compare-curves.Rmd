@@ -30,6 +30,7 @@ path_figures <- file.path(path_data, "figures")
 
 source(file.path(path_src, "process-data.R"))
 source(file.path(path_src, "explore-data.R"))
+source(file.path(path_src, "visualize-curves.R"))
 
 sari <- readRDS(file.path(path_processed, "sari_cum_2009_06_14_to_11_22.rds"))
 ```
@@ -87,11 +88,14 @@ list(Exponential = mod_exp, Gompertz = mod_gomp) |>
 Let's obtain the curves with the estimated parameter for each model.
 
 ```{r}
+ntimes <- nlevels(df_train$date)
+names_lambda <- paste0("logN", 1:ntimes)
+
 # predict
 df_train <- df_train |>
-    mutate(gomp_total = exp(coef(mod_gomp)[-(1:2)])[as.integer(df_train$date)],
+    mutate(gomp_total = exp(coef(mod_gomp)[names_lambda])[date],
            gomp_q = cases / gomp_total,
-           exp_total = exp(coef(mod_exp)[-(1:2)])[as.integer(df_train$date)],
+           exp_total = exp(coef(mod_exp)[names_lambda])[date],
            exp_q = cases / exp_total
     ) |>
     pivot_longer(gomp_total:exp_q, names_to = c("model", "var"), names_pattern = "(.*)_(.*)") |>
@@ -110,22 +114,7 @@ Visualize the estimated theoretical curves using the exponential and Gompertz mo
 
 ```{r, fig.height = 3.2}
 mylabs <- c("exp" = "(a) Exponential", "gomp" = "(b) Gompertz")
-
-p <- ggplot(df_train) +
-    geom_line(aes(delay, q, group = date), color = "gray", linewidth = rel(0.3)) +
-    geom_point(aes(delay, q, group = date, color = "Empirical"), size = rel(0.5)) +
-    geom_line(aes(delay, q, color = "Theoretical"), df_fit, linewidth = rel(0.5),
-              linetype = "dashed") +
-    labs(title = NULL, y = TeX("$q(d)$"), x = TeX("$d$"), color = NULL) +
-    facet_wrap(~ model, scales = "free", labeller = as_labeller(mylabs)) +
-    theme_classic(9) +
-    scale_colour_manual(values = c("gray30", "red")) +
-    theme(
-        legend.position = c(0.9, 0.15),
-        strip.background = element_blank(),
-        strip.text = element_text(face = "bold")
-    )
-p
+p <- plot_compare_curves(df_train, df_fit, mylabs)
 ggsave(file.path(path_figures, "sari_qd_comparison.png"), p,
        width = 20 * 8/ 20, height = 8 * 8 / 20, dpi = 300)
 ```

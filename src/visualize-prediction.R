@@ -1,4 +1,5 @@
 
+# convert delay matrix to long data.frame
 matdelay_df <- function(X, dates, varname = "cases") {
     X |>
         data.frame() |>
@@ -52,4 +53,5 @@ predmean_df <- function(models, delays, dates, qmodel = "exponential") {
         bind_rows(.id = "method") |>
         mutate(method = factor(method, levels = ))
 }
+
 
