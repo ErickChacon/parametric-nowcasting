@@ -1,8 +1,8 @@
 # Stan models
-src/nonparam
-src/exp
-src/exp-rw1
-src/exp-ou
+src/models/nonparam
+src/models/exp
+src/models/exp-rw1
+src/models/exp-ou
 
 # History files
 .Rhistory
