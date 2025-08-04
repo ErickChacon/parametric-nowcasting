@@ -17,7 +17,9 @@ target_all = docs/content/_index.html \
 	docs/content/40-explore/28-example-reporting-probability.html \
 	docs/content/50-simulate/_index.html \
 	docs/content/50-simulate/11-test-nonparam.html \
-	docs/content/50-simulate/12-test-param-exp.html
+	docs/content/50-simulate/12-test-param-exp.html \
+	docs/content/50-simulate/13-test-param-exp-rw1.html \
+	docs/content/50-simulate/14-test-param-exp-ou.html
 
 target_clean = docs/content/_index.html \
 	docs/content/30-process/_index.html \
@@ -31,7 +33,9 @@ target_clean = docs/content/_index.html \
 	docs/content/40-explore/28-example-reporting-probability.html \
 	docs/content/50-simulate/_index.html \
 	docs/content/50-simulate/11-test-nonparam.html \
-	docs/content/50-simulate/12-test-param-exp.html
+	docs/content/50-simulate/12-test-param-exp.html \
+	docs/content/50-simulate/13-test-param-exp-rw1.html \
+	docs/content/50-simulate/14-test-param-exp-ou.html
 
 all: $(target_all)
 
@@ -81,6 +85,12 @@ docs/content/50-simulate/11-test-nonparam.html: \
 
 docs/content/50-simulate/12-test-param-exp.html: \
 	scripts/50-simulate/12-test-param-exp.Rmd
+
+docs/content/50-simulate/13-test-param-exp-rw1.html: \
+	scripts/50-simulate/13-test-param-exp-rw1.Rmd
+
+docs/content/50-simulate/14-test-param-exp-ou.html: \
+	scripts/50-simulate/14-test-param-exp-ou.Rmd
 
 $(target_all):
 	@Rscript -e 'blogdown:::build_rmds("$(<D)/$(<F)", "docs", "scripts")'
