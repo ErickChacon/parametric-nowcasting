@@ -103,11 +103,16 @@ test = model$sample(
 <pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
 <pre><code>#&gt; Chain 1</code></pre>
 <pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in &#39;/tmp/RtmpUb8qqc/model-197695b7a1.stan&#39;, line 44, column 4 to column 47)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
 <pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpUb8qqc/model-197695b7a1.stan&#39;, line 51, column 6 to column 49)</code></pre>
 <pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
 <pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
 <pre><code>#&gt; Chain 1</code></pre>
-<pre><code>#&gt; Chain 1 finished in 6.4 seconds.</code></pre>
+<pre><code>#&gt; Chain 1 finished in 8.2 seconds.</code></pre>
 <pre class="r"><code>varnames &lt;- test$summary()$variable
 
 mcmc_areas(test$draws(&quot;sigma_log_b&quot;), prob_outer = 0.95)</code></pre>
@@ -214,7 +219,7 @@ test = model$sample(
 <pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
 <pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
 <pre><code>#&gt; Chain 1</code></pre>
-<pre><code>#&gt; Chain 1 finished in 11.3 seconds.</code></pre>
+<pre><code>#&gt; Chain 1 finished in 8.4 seconds.</code></pre>
 <pre class="r"><code>varnames &lt;- test$summary()$variable
 
 mcmc_areas(test$draws(&quot;sigma_log_b&quot;), prob_outer = 0.95)</code></pre>
