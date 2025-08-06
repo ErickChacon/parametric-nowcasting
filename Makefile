@@ -19,7 +19,10 @@ target_all = docs/content/_index.html \
 	docs/content/50-simulate/11-test-nonparam.html \
 	docs/content/50-simulate/12-test-param-exp.html \
 	docs/content/50-simulate/13-test-param-exp-rw1.html \
-	docs/content/50-simulate/14-test-param-exp-ou.html
+	docs/content/50-simulate/14-test-param-exp-ou.html \
+	docs/content/60-model/_index.html \
+	data/modelled/sari_20090614_20091122_samples.rds \
+	docs/content/60-model/12-sari-fit-model.html
 
 target_clean = docs/content/_index.html \
 	docs/content/30-process/_index.html \
@@ -35,7 +38,9 @@ target_clean = docs/content/_index.html \
 	docs/content/50-simulate/11-test-nonparam.html \
 	docs/content/50-simulate/12-test-param-exp.html \
 	docs/content/50-simulate/13-test-param-exp-rw1.html \
-	docs/content/50-simulate/14-test-param-exp-ou.html
+	docs/content/50-simulate/14-test-param-exp-ou.html \
+	docs/content/60-model/_index.html \
+	docs/content/60-model/12-sari-fit-model.html
 
 all: $(target_all)
 
@@ -91,6 +96,13 @@ docs/content/50-simulate/13-test-param-exp-rw1.html: \
 
 docs/content/50-simulate/14-test-param-exp-ou.html: \
 	scripts/50-simulate/14-test-param-exp-ou.Rmd
+
+docs/content/60-model/_index.html: \
+	scripts/60-model/_index.Rmd
+
+data/modelled/sari_20090614_20091122_samples.rds docs/content/60-model/12-sari-fit-model.html: \
+	scripts/60-model/12-sari-fit-model.Rmd \
+	data/processed/sari_cum_2009_06_14_to_11_22.rds
 
 $(target_all):
 	@Rscript -e 'blogdown:::build_rmds("$(<D)/$(<F)", "docs", "scripts")'

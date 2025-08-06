@@ -1,0 +1,69 @@
+---
+title: "SARI: Model fitting"
+prerequisites:
+    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+targets:
+    - data/modelled/sari_20090614_20091122_samples.rds
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center")
+knitr::opts_chunk$set(fig.height = 6, fig.width = 8, out.width = "100%")
+knitr::opts_chunk$set(comment = "#>")
+options(width = 100)
+```
+
+## Load packages, scripts and data
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(cmdstanr)
+
+path_proj <- here::here()
+path_src <- file.path(path_proj, "src")
+path_models <- file.path(path_src, "models")
+path_data <- file.path(path_proj, "data")
+path_processed <- file.path(path_data, "processed")
+path_modelled <- file.path(path_data, "modelled")
+path_samples_sari <- file.path(path_data, "draws", "sari")
+
+source(file.path(path_src, "20-processing.R"))
+source(file.path(path_src, "30-eda.R"))
+source(file.path(path_src, "fit_function.R"))
+source(file.path(path_src, "50-modelling.R"))
+
+sari <- readRDS(file.path(path_processed, "sari_cum_2009_06_14_to_11_22.rds"))
+range(sari$date)
+```
+
+## Load models
+
+```{r}
+model_names <- c("nonparam", "exp", "exp_rw1", "exp_ou")
+models <- file.path(path_models, paste0(model_names, ".stan")) |>
+    lapply(cmdstan_model) |>
+    setNames(model_names)
+```
+
+## Fit models
+
+```{r}
+D <- 26
+hypers <- hypers_q(phi_ref = 0.2, D_ref = D, type = "exponential", alpha_phi = 1.4, sd_log_b = 0.5, delay_seq = 0:D)
+end_dates <- seq(as.Date("2009-08-02"), as.Date("2009-11-22"), by = "4 week")
+samples_list <- nowcast_samples_dates(sari, models, hypers, end_dates, 26,
+    iter_sampling = 1000, iter_warmup = 500, chains = 1, refresh = 200, thin = 1,
+    output_dir = path_samples_sari)
+saveRDS(samples_list, file.path(path_modelled, "sari_20090614_20091122_samples.rds"))
+```
+
+## Time to execute the task
+
+Only useful when executed with `Rscript`.
+
+```{r}
+proc.time()
+```
+

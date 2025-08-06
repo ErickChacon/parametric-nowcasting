@@ -43,3 +43,23 @@ hypers_q <- function(phi_ref = 0.2, D_ref = 20, type = "exponential", alpha_phi 
         mean_log_b = mean_log_b, sd_log_b = sd_log_b,
         mean_logit_phi = mean_logit_phi, sd_logit_phi = sd_logit_phi)
 }
+
+# Nowcasting fitting on stan
+
+nowcast_samples <- function(data, models, hypers, D = NULL, ...){
+  # prepare data
+  data <- as.matrix(select(data, matches("^delay[0-9]+")))
+  if (is.null(D)) { D <- ncol(data) - 1}
+  data_stan <- c(list(T = nrow(data), D = D, Y = data), hypers)
+
+  # sampling
+  lapply(models, function(x) x$sample(data = data_stan, ...))
+}
+
+nowcast_samples_dates <- function(data, models, hypers, end_date, D = NULL, ...) {
+  end_date <- end_date[end_date >= min(data$date) & end_date <= max(data$date)]
+  end_date <- setNames(end_date, end_date)
+
+  # filter and sample for each period
+  lapply(end_date, function(x) nowcast_samples(filter(data, date <= x), models, hypers, D, ...))
+}

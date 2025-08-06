@@ -1,0 +1,410 @@
+---
+title: "SARI: Model fitting"
+prerequisites:
+    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+targets:
+    - data/modelled/sari_20090614_20091122_samples.rds
+---
+
+
+
+<div id="load-packages-scripts-and-data" class="section level2">
+<h2>Load packages, scripts and data</h2>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>#&gt; 
+#&gt; Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:stats&#39;:
+#&gt; 
+#&gt;     filter, lag</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:base&#39;:
+#&gt; 
+#&gt;     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)
+library(ggplot2)
+library(cmdstanr)</code></pre>
+<pre><code>#&gt; CmdStan path set to: /usr/share/cmdstan/cmdstan-2.36.0</code></pre>
+<pre><code>#&gt; This is cmdstanr version 0.9.0</code></pre>
+<pre><code>#&gt; - CmdStanR documentation and vignettes: mc-stan.org/cmdstanr</code></pre>
+<pre><code>#&gt; - CmdStan path: /usr/share/cmdstan/cmdstan-2.36.0</code></pre>
+<pre><code>#&gt; - CmdStan version: 2.36.0</code></pre>
+<pre class="r"><code>path_proj &lt;- here::here()
+path_src &lt;- file.path(path_proj, &quot;src&quot;)
+path_models &lt;- file.path(path_src, &quot;models&quot;)
+path_data &lt;- file.path(path_proj, &quot;data&quot;)
+path_processed &lt;- file.path(path_data, &quot;processed&quot;)
+path_modelled &lt;- file.path(path_data, &quot;modelled&quot;)
+path_samples_sari &lt;- file.path(path_data, &quot;draws&quot;, &quot;sari&quot;)
+
+source(file.path(path_src, &quot;20-processing.R&quot;))
+source(file.path(path_src, &quot;30-eda.R&quot;))
+source(file.path(path_src, &quot;fit_function.R&quot;))
+source(file.path(path_src, &quot;50-modelling.R&quot;))
+
+sari &lt;- readRDS(file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))
+range(sari$date)</code></pre>
+<pre><code>#&gt; [1] &quot;2009-06-14&quot; &quot;2009-11-22&quot;</code></pre>
+</div>
+<div id="load-models" class="section level2">
+<h2>Load models</h2>
+<pre class="r"><code>model_names &lt;- c(&quot;nonparam&quot;, &quot;exp&quot;, &quot;exp_rw1&quot;, &quot;exp_ou&quot;)
+models &lt;- file.path(path_models, paste0(model_names, &quot;.stan&quot;)) |&gt;
+    lapply(cmdstan_model) |&gt;
+    setNames(model_names)</code></pre>
+</div>
+<div id="fit-models" class="section level2">
+<h2>Fit models</h2>
+<pre class="r"><code>D &lt;- 26
+hypers &lt;- hypers_q(phi_ref = 0.2, D_ref = D, type = &quot;exponential&quot;, alpha_phi = 1.4, sd_log_b = 0.5, delay_seq = 0:D)</code></pre>
+<p><img src="/parametric-nowcasting/60-model/12-sari-fit-model_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>end_dates &lt;- seq(as.Date(&quot;2009-08-02&quot;), as.Date(&quot;2009-11-22&quot;), by = &quot;4 week&quot;)
+samples_list &lt;- nowcast_samples_dates(sari, models, hypers, end_dates, 26,
+    iter_sampling = 1000, iter_warmup = 500, chains = 1, refresh = 200, thin = 1,
+    output_dir = path_samples_sari)</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.4 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.1 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.9 seconds.</code></pre>
+<pre><code>#&gt; Warning: 8 of 1000 (1.0%) transitions ended with a divergence.
+#&gt; See https://mc-stan.org/misc/warnings for details.</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.1 seconds.</code></pre>
+<pre><code>#&gt; Warning: 48 of 1000 (5.0%) transitions ended with a divergence.
+#&gt; See https://mc-stan.org/misc/warnings for details.</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.8 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25416beddd.stan&#39;, line 35, column 6 to column 46)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 45, column 4 to column 59)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.0 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.1 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.9 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.0 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.3 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.3 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.8 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.9 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.9 seconds.</code></pre>
+<pre class="r"><code>saveRDS(samples_list, file.path(path_modelled, &quot;sari_20090614_20091122_samples.rds&quot;))</code></pre>
+</div>
+<div id="time-to-execute-the-task" class="section level2">
+<h2>Time to execute the task</h2>
+<p>Only useful when executed with <code>Rscript</code>.</p>
+<pre class="r"><code>proc.time()</code></pre>
+<pre><code>#&gt;    user  system elapsed 
+#&gt;  23.879   0.958  24.739</code></pre>
+</div>
