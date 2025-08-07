@@ -31,7 +31,12 @@ target_all = docs/content/_index.html \
 	data/figures/huso104_reported_fitted_curves.png \
 	docs/content/70-summarise/24-huso-model-adequacy.html \
 	data/figures/sari_nowcast.png \
-	docs/content/70-summarise/32-sari-nowcast-per-model.html
+	docs/content/70-summarise/32-sari-nowcast-per-model.html \
+	data/figures/huso104_nowcast.png \
+	docs/content/70-summarise/34-huso-nowcast-per-model.html \
+	data/figures/huso104_nowcast_ou_95.png \
+	data/figures/huso104_nowcast_ou_70.png \
+	docs/content/70-summarise/44-huso-nowcast-ou.html
 
 target_clean = docs/content/_index.html \
 	docs/content/30-process/_index.html \
@@ -54,7 +59,9 @@ target_clean = docs/content/_index.html \
 	docs/content/70-summarise/_index.html \
 	docs/content/70-summarise/22-sari-model-adequacy.html \
 	docs/content/70-summarise/24-huso-model-adequacy.html \
-	docs/content/70-summarise/32-sari-nowcast-per-model.html
+	docs/content/70-summarise/32-sari-nowcast-per-model.html \
+	docs/content/70-summarise/34-huso-nowcast-per-model.html \
+	docs/content/70-summarise/44-huso-nowcast-ou.html
 
 all: $(target_all)
 
@@ -139,6 +146,16 @@ data/figures/sari_nowcast.png docs/content/70-summarise/32-sari-nowcast-per-mode
 	scripts/70-summarise/32-sari-nowcast-per-model.Rmd \
 	data/processed/sari_41002_20090614_20091122.rds \
 	data/modelled/sari_41002_20090614_20091122_mcmc.rds
+
+data/figures/huso104_nowcast.png docs/content/70-summarise/34-huso-nowcast-per-model.html: \
+	scripts/70-summarise/34-huso-nowcast-per-model.Rmd \
+	data/processed/huso104_20110512_20110606.rds \
+	data/modelled/huso104_20110512_20110606_mcmc.rds
+
+data/figures/huso104_nowcast_ou_95.png data/figures/huso104_nowcast_ou_70.png docs/content/70-summarise/44-huso-nowcast-ou.html: \
+	scripts/70-summarise/44-huso-nowcast-ou.Rmd \
+	data/processed/huso104_20110512_20110606.rds \
+	data/modelled/huso104_20110512_20110606_mcmc.rds
 
 $(target_all):
 	@Rscript -e 'blogdown:::build_rmds("$(<D)/$(<F)", "docs", "scripts")'

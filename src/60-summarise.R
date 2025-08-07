@@ -139,7 +139,8 @@ nowcast_summary <- function(samples, date_end, date_by = "1 day", alpha = 0.05) 
     date_size <- length(dimnames(draws)$variable)
     dplyr::tibble(
         date = rev(seq(as.Date(date_end), length.out = date_size, by = paste0("-", date_by))),
-        mean = apply(draws, 3, mean, na.rm = TRUE),
+        # mean = apply(draws, 3, mean, na.rm = TRUE),
+        median = apply(draws, 3, quantile, probs = 0.5, na.rm = TRUE),
         lower = apply(draws, 3, quantile, probs = alpha / 2, na.rm = TRUE),
         upper = apply(draws, 3, quantile, probs = 1 - alpha / 2, na.rm = TRUE)
     )
@@ -163,49 +164,74 @@ nowcast_periods <- function(models_by_date, date_by = "1 day", alpha = 0.05) {
 }
 
 
-plot_nowcast <- function(df_nowcast, df_summary, model_labels = NULL, model_colors = NULL) {
-    if (is.null(model_labels)) {
-        model_labels <- c(
-            "nonparam"  = "bold('Non-parametric'~q[d])",
-            "exp"       = "bold('Parametric'~q(d))",
-            "exp_rw1"   = "bold(q[t](d)~'with random walks')",
-            "exp_ou"    = "bold(q[t](d)~'with OU processes')",
-            "gom"       = "bold('Parametric'~q(d))",
-            "gom_rw1"   = "bold(q[t](d)~'with random walks')",
-            "gom_ou"    = "bold(q[t](d)~'with OU processes')"
-        )
-    }
-    if (is.null(model_colors)) {
-        model_colors <- c(
-            "nonparam" = "#008080",
-            "exp" = "yellowgreen",
-            "exp_rw1" = "#8446c6",
-            "exp_ou" = "#4682B4",
-            "gom" = "yellowgreen",
-            "gom_rw1" = "#8446c6",
-            "gom_ou" = "#4682B4",
-            "Current reported cases" = "gray40",
-            "Eventual reported cases" = "tomato"
-        )
-    }
-    model_names <- levels(df_nowcast$model)
+plot_nowcast <- function(df_nowcast, df_summary, by_model = TRUE, model_labels = NULL,
+  model_colors = NULL) {
+  if (is.null(model_labels)) {
+    model_labels <- c(
+      "nonparam"  = "bold('Non-parametric'~q[d])",
+      "exp"       = "bold('Parametric'~q(d))",
+      "exp_rw1"   = "bold(q[t](d)~'with random walks')",
+      "exp_ou"    = "bold(q[t](d)~'with OU processes')",
+      "gom"       = "bold('Parametric'~q(d))",
+      "gom_rw1"   = "bold(q[t](d)~'with random walks')",
+      "gom_ou"    = "bold(q[t](d)~'with OU processes')"
+    )
+  }
+  if (is.null(model_colors)) {
+    model_colors <- c(
+      "nonparam" = "#008080",
+      "exp" = "yellowgreen",
+      "exp_rw1" = "#8446c6",
+      "exp_ou" = "#4682B4",
+      "gom" = "yellowgreen",
+      "gom_rw1" = "#8446c6",
+      "gom_ou" = "#4682B4",
+      "Current reported cases" = "gray40",
+      "Eventual reported cases" = "tomato"
+    )
+  }
 
-    ggplot(df_nowcast) +
-        geom_ribbon(aes(x = date, ymin = lower, ymax = upper, fill = model), alpha = 0.4, show.legend = FALSE) +
-        geom_line(aes(date, mean, color = model), linewidth = rel(0.4), show.legend = FALSE) +
-        geom_line(aes(date, cases_reported, color = "Current reported cases"), df_summary, linewidth = rel(0.4)) +
-        geom_point(aes(date, cases_reported, color = "Current reported cases"), df_summary, size = rel(0.5)) +
-        geom_line(aes(date, cases_baseline, color = "Eventual reported cases"), df_summary, linetype = 6) +
-        facet_grid(date_end ~ model, labeller = labeller(model = as_labeller(model_labels, label_parsed)), scales = "free") +
-        labs(fill = NULL, color = NULL, x = NULL, y = "Number of cases") +
-        theme_bw(9) +
-        theme(
-            legend.position = c(0.88, 0.94),
-            legend.key.height = unit(0.4, 'cm'),
-            strip.background = element_blank(),
-            strip.text = element_text(face = "bold"),
-            panel.grid.minor = element_blank()
-        ) +
-        scale_fill_manual(values = model_colors) +
-        scale_color_manual(values = model_colors, breaks = c("Current reported cases", "Eventual reported cases"))
+  model_names <- levels(df_nowcast$model)
+  emp_names <- c("Current reported cases", "Eventual reported cases")
+
+  gg <- ggplot(df_nowcast) +
+    geom_ribbon(aes(x = date, ymin = lower, ymax = upper, fill = model), alpha = 0.4, show.legend = FALSE) +
+    geom_line(aes(date, median, color = model), linewidth = rel(0.4)) +
+    geom_line(aes(date, cases_reported, color = "Current reported cases"), df_summary, linewidth = rel(0.4)) +
+    geom_point(aes(date, cases_reported, color = "Current reported cases"), df_summary, size = rel(0.5)) +
+    geom_line(aes(date, cases_baseline, color = "Eventual reported cases"), df_summary, linetype = 6)
+
+  if (by_model) {
+    gg <- gg +
+      facet_grid(date_end ~ model,
+        labeller = labeller(model = as_labeller(model_labels, label_parsed)), scales = "free")
+  } else {
+    gg <- gg +
+      facet_wrap(~ date_end, scales = "free_y")
+  }
+
+  gg <- gg +
+    labs(fill = NULL, color = NULL, x = NULL, y = "Number of cases") +
+    theme_bw(9) +
+    theme(
+      legend.position = c(0.88, 0.94),
+      legend.key.height = unit(0.4, 'cm'),
+      strip.background = element_blank(),
+      strip.text = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    ) +
+    scale_fill_manual(values = model_colors)
+
+  if (by_model) {
+    gg <- gg +
+      scale_color_manual(values = model_colors, breaks = emp_names)
+  } else {
+    model_name <- as.character(unique(df_nowcast$model))
+    gg <- gg +
+      scale_color_manual(values = model_colors,
+        breaks = c(emp_names, model_name),
+        labels = c(emp_names, "Predicted cases"),
+      )
+  }
 }
+
