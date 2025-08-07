@@ -23,9 +23,13 @@ target_all = docs/content/_index.html \
 	docs/content/60-model/_index.html \
 	data/modelled/sari_41002_20090614_20091122_mcmc.rds \
 	docs/content/60-model/22-sari-fit-model.html \
+	data/modelled/huso104_20110512_20110606_mcmc.rds \
+	docs/content/60-model/24-huso-fit-model.html \
 	docs/content/70-summarise/_index.html \
 	data/figures/sari_reported_fitted_curves.png \
 	docs/content/70-summarise/22-sari-model-adequacy.html \
+	data/figures/huso104_reported_fitted_curves.png \
+	docs/content/70-summarise/24-huso-model-adequacy.html \
 	data/figures/sari_nowcast.png \
 	docs/content/70-summarise/32-sari-nowcast-per-model.html
 
@@ -46,8 +50,10 @@ target_clean = docs/content/_index.html \
 	docs/content/50-simulate/14-test-param-exp-ou.html \
 	docs/content/60-model/_index.html \
 	docs/content/60-model/22-sari-fit-model.html \
+	docs/content/60-model/24-huso-fit-model.html \
 	docs/content/70-summarise/_index.html \
 	docs/content/70-summarise/22-sari-model-adequacy.html \
+	docs/content/70-summarise/24-huso-model-adequacy.html \
 	docs/content/70-summarise/32-sari-nowcast-per-model.html
 
 all: $(target_all)
@@ -112,6 +118,10 @@ data/modelled/sari_41002_20090614_20091122_mcmc.rds docs/content/60-model/22-sar
 	scripts/60-model/22-sari-fit-model.Rmd \
 	data/processed/sari_41002_20090614_20091122.rds
 
+data/modelled/huso104_20110512_20110606_mcmc.rds docs/content/60-model/24-huso-fit-model.html: \
+	scripts/60-model/24-huso-fit-model.Rmd \
+	data/processed/huso104_20110512_20110606.rds
+
 docs/content/70-summarise/_index.html: \
 	scripts/70-summarise/_index.Rmd
 
@@ -119,6 +129,11 @@ data/figures/sari_reported_fitted_curves.png docs/content/70-summarise/22-sari-m
 	scripts/70-summarise/22-sari-model-adequacy.Rmd \
 	data/processed/sari_41002_20090614_20091122.rds \
 	data/modelled/sari_41002_20090614_20091122_mcmc.rds
+
+data/figures/huso104_reported_fitted_curves.png docs/content/70-summarise/24-huso-model-adequacy.html: \
+	scripts/70-summarise/24-huso-model-adequacy.Rmd \
+	data/processed/huso104_20110512_20110606.rds \
+	data/modelled/huso104_20110512_20110606_mcmc.rds
 
 data/figures/sari_nowcast.png docs/content/70-summarise/32-sari-nowcast-per-model.html: \
 	scripts/70-summarise/32-sari-nowcast-per-model.Rmd \

@@ -3,6 +3,9 @@ src/models/nonparam
 src/models/exp
 src/models/exp_rw1
 src/models/exp_ou
+src/models/gom
+src/models/gom_rw1
+src/models/gom_ou
 
 # History files
 .Rhistory

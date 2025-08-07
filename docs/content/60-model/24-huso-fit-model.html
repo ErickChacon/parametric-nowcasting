@@ -1,0 +1,862 @@
+---
+title: "HusO104: Model fitting"
+prerequisites:
+    - data/processed/huso104_20110512_20110606.rds
+targets:
+    - data/modelled/huso104_20110512_20110606_mcmc.rds
+---
+
+
+
+<div id="load-packages-scripts-and-data" class="section level2">
+<h2>Load packages, scripts and data</h2>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>#&gt; 
+#&gt; Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:stats&#39;:
+#&gt; 
+#&gt;     filter, lag</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:base&#39;:
+#&gt; 
+#&gt;     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)
+library(ggplot2)
+library(cmdstanr)</code></pre>
+<pre><code>#&gt; CmdStan path set to: /usr/share/cmdstan/cmdstan-2.36.0</code></pre>
+<pre><code>#&gt; This is cmdstanr version 0.9.0</code></pre>
+<pre><code>#&gt; - CmdStanR documentation and vignettes: mc-stan.org/cmdstanr</code></pre>
+<pre><code>#&gt; - CmdStan path: /usr/share/cmdstan/cmdstan-2.36.0</code></pre>
+<pre><code>#&gt; - CmdStan version: 2.36.0</code></pre>
+<pre class="r"><code>path_proj &lt;- here::here()
+path_src &lt;- file.path(path_proj, &quot;src&quot;)
+path_models &lt;- file.path(path_src, &quot;models&quot;)
+path_data &lt;- file.path(path_proj, &quot;data&quot;)
+path_processed &lt;- file.path(path_data, &quot;processed&quot;)
+path_modelled &lt;- file.path(path_data, &quot;modelled&quot;)
+path_samples_huso &lt;- file.path(path_data, &quot;draws&quot;, &quot;huso&quot;)
+
+source(file.path(path_src, &quot;20-processing.R&quot;))
+source(file.path(path_src, &quot;30-eda.R&quot;))
+source(file.path(path_src, &quot;50-modelling.R&quot;))
+
+huso &lt;- readRDS(file.path(path_processed, &quot;huso104_20110512_20110606.rds&quot;))
+range(huso$date)</code></pre>
+<pre><code>#&gt; [1] &quot;2011-05-12&quot; &quot;2011-06-06&quot;</code></pre>
+</div>
+<div id="load-and-compile-models" class="section level2">
+<h2>Load and compile models</h2>
+<pre class="r"><code>model_names &lt;- c(&quot;nonparam&quot;, &quot;gom&quot;, &quot;gom_rw1&quot;, &quot;gom_ou&quot;)
+models &lt;- file.path(path_models, paste0(model_names, &quot;.stan&quot;)) |&gt;
+    lapply(cmdstan_model) |&gt;
+    setNames(model_names)</code></pre>
+</div>
+<div id="fit-models" class="section level2">
+<h2>Fit models</h2>
+<p>Evaluate the priors for the cumulative reporting probability curves.</p>
+<pre class="r"><code>hypers &lt;- hypers_q(phi_ref = 0.1, D_ref = 15, type = &quot;gompertz&quot;, alpha_phi = 1.4, sd_log_b = 0.5, delay_seq = 0:15)</code></pre>
+<p><img src="/parametric-nowcasting/60-model/24-huso-fit-model_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>hypers</code></pre>
+<pre><code>#&gt; $alpha_phi
+#&gt; [1] 1.4
+#&gt; 
+#&gt; $beta_phi
+#&gt; [1] 9.933333
+#&gt; 
+#&gt; $mean_log_b
+#&gt; [1] -1.371937
+#&gt; 
+#&gt; $sd_log_b
+#&gt; [1] 0.5
+#&gt; 
+#&gt; $mean_logit_phi
+#&gt; [1] -2.306101
+#&gt; 
+#&gt; $sd_logit_phi
+#&gt; [1] 1.063609</code></pre>
+<p>Obtain mcmc samples for selected models assuming different ending times.</p>
+<pre class="r"><code>D &lt;- 15
+end_dates &lt;- seq(as.Date(&quot;2011-05-25&quot;), as.Date(&quot;2011-06-06&quot;), by = &quot;3 days&quot;)
+samples_list &lt;- nowcast_sample_dates(huso, models, hypers, end_dates, D,
+    iter_sampling = 1000, iter_warmup = 500, chains = 1,
+    output_dir = path_samples_huso)</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpUT1nPq/model-19191cb7ce.stan&#39;, line 35, column 6 to column 46)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in &#39;/tmp/RtmpUT1nPq/model-1934c8b837.stan&#39;, line 45, column 4 to column 59)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.5 seconds.</code></pre>
+<pre><code>#&gt; Warning: 4 of 1000 (0.0%) transitions ended with a divergence.
+#&gt; See https://mc-stan.org/misc/warnings for details.</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpUT1nPq/model-197f0d872e.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.2 seconds.</code></pre>
+<pre><code>#&gt; Warning: 14 of 1000 (1.0%) transitions ended with a divergence.
+#&gt; See https://mc-stan.org/misc/warnings for details.</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.3 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.4 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.6 seconds.</code></pre>
+<pre><code>#&gt; Warning: 4 of 1000 (0.0%) transitions ended with a divergence.
+#&gt; See https://mc-stan.org/misc/warnings for details.</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpUT1nPq/model-197f0d872e.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.7 seconds.</code></pre>
+<pre><code>#&gt; Warning: 3 of 1000 (0.0%) transitions ended with a divergence.
+#&gt; See https://mc-stan.org/misc/warnings for details.</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.3 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.4 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in &#39;/tmp/RtmpUT1nPq/model-1934c8b837.stan&#39;, line 44, column 4 to column 47)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.8 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in &#39;/tmp/RtmpUT1nPq/model-197f0d872e.stan&#39;, line 46, column 2 to column 55)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 2.2 seconds.</code></pre>
+<pre><code>#&gt; Warning: 2 of 1000 (0.0%) transitions ended with a divergence.
+#&gt; See https://mc-stan.org/misc/warnings for details.</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.5 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpUT1nPq/model-19191cb7ce.stan&#39;, line 35, column 6 to column 46)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.4 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 2.4 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in &#39;/tmp/RtmpUT1nPq/model-197f0d872e.stan&#39;, line 45, column 2 to column 43)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 2.3 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.6 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: gom_model_namespace::log_prob: q[2] is -nan, but must be greater than or equal to 0.000000 (in &#39;/tmp/RtmpUT1nPq/model-19191cb7ce.stan&#39;, line 20, column 2 to column 34)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.4 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 2.3 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpUT1nPq/model-197f0d872e.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  100 / 1500 [  6%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  300 / 1500 [ 20%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  500 / 1500 [ 33%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  600 / 1500 [ 40%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  800 / 1500 [ 53%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1000 / 1500 [ 66%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1200 / 1500 [ 80%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1400 / 1500 [ 93%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 2.2 seconds.</code></pre>
+<pre class="r"><code>samples_list</code></pre>
+<pre><code>#&gt; $`2011-05-25`
+#&gt; $`2011-05-25`$nonparam
+#&gt;   variable   mean median    sd   mad     q5    q95 rhat ess_bulk ess_tail
+#&gt;  lp__      -72.58 -72.13  4.36  4.34 -80.19 -66.31 1.00      311      537
+#&gt;  lambda[1]   0.22   0.16  0.23  0.15   0.02   0.65 1.00      782      359
+#&gt;  lambda[2]   1.31   1.21  0.59  0.53   0.55   2.48 1.00     1184      814
+#&gt;  lambda[3]   0.10   0.05  0.15  0.06   0.00   0.39 1.00     1236      703
+#&gt;  lambda[4]   1.35   1.21  0.73  0.65   0.43   2.69 1.00      768      718
+#&gt;  lambda[5]   0.95   0.75  0.76  0.54   0.18   2.35 1.00      873      523
+#&gt;  lambda[6]   7.37   6.92  2.98  2.65   3.48  12.76 1.00      326      612
+#&gt;  lambda[7]   4.58   4.06  2.55  2.21   1.53   9.64 1.00      373      586
+#&gt;  lambda[8]  28.98  26.17 13.80 10.84  13.24  55.79 1.01      254      291
+#&gt;  lambda[9]  39.74  34.85 21.09 16.44  16.47  78.23 1.01      214      287
+#&gt; 
+#&gt;  # showing 10 of 61 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-05-25`$gom
+#&gt;   variable   mean median    sd   mad     q5    q95 rhat ess_bulk ess_tail
+#&gt;  lp__      -29.43 -29.12  2.82  2.72 -34.65 -25.46 1.00      385      688
+#&gt;  lambda[1]   0.27   0.20  0.26  0.18   0.03   0.79 1.00      743      620
+#&gt;  lambda[2]   1.57   1.44  0.78  0.62   0.62   2.99 1.00      571      538
+#&gt;  lambda[3]   0.15   0.07  0.21  0.09   0.00   0.53 1.00      974      506
+#&gt;  lambda[4]   1.69   1.48  1.02  0.83   0.55   3.52 1.00      518      682
+#&gt;  lambda[5]   1.11   0.89  0.89  0.66   0.22   2.75 1.00      704      632
+#&gt;  lambda[6]   9.39   8.55  4.51  3.73   3.98  18.13 1.00      359      465
+#&gt;  lambda[7]   5.83   4.96  3.73  2.90   1.74  12.49 1.00      413      652
+#&gt;  lambda[8]  35.61  31.27 20.27 14.80  13.58  74.51 1.00      303      456
+#&gt;  lambda[9]  46.51  38.15 30.85 19.82  16.05 104.89 1.00      329      393
+#&gt; 
+#&gt;  # showing 10 of 47 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-05-25`$gom_rw1
+#&gt;   variable   mean median     sd   mad     q5    q95 rhat ess_bulk ess_tail
+#&gt;  lp__      -24.50 -24.38   8.37  7.92 -38.81 -11.23 1.02       87      101
+#&gt;  lambda[1]   2.59   0.81   8.52  0.87   0.07   8.31 1.01      690      596
+#&gt;  lambda[2]  50.02  10.15 722.46  9.59   1.88  86.83 1.01      317      735
+#&gt;  lambda[3]   0.98   0.27   3.01  0.35   0.01   3.25 1.00      847      555
+#&gt;  lambda[4]  20.27   7.63  56.54  6.84   1.55  63.93 1.02      449      604
+#&gt;  lambda[5]   8.84   3.37  20.76  3.32   0.50  30.37 1.00      596      479
+#&gt;  lambda[6]  36.85  22.58  47.29 16.85   6.74 108.09 1.00      481      449
+#&gt;  lambda[7]  11.64   7.56  13.57  5.82   2.22  33.86 1.01      493      662
+#&gt;  lambda[8]  38.52  29.64  32.39 18.09  11.32  98.82 1.00      341      578
+#&gt;  lambda[9]  32.76  21.81  35.40 14.56   8.07  91.27 1.00      323      434
+#&gt; 
+#&gt;  # showing 10 of 311 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-05-25`$gom_ou
+#&gt;   variable   mean median     sd   mad     q5    q95 rhat ess_bulk ess_tail
+#&gt;  lp__      -33.71 -34.10  11.34 10.98 -52.40 -14.67 1.01       53      133
+#&gt;  lambda[1]   0.70   0.25   3.05  0.26   0.03   2.10 1.00      399      471
+#&gt;  lambda[2]  15.76   4.00 106.36  3.62   1.02  41.67 1.02      120      435
+#&gt;  lambda[3]   0.97   0.16   4.11  0.21   0.00   3.50 1.00      586      433
+#&gt;  lambda[4]  15.81   4.81  50.60  4.35   1.06  52.67 1.00      498      643
+#&gt;  lambda[5]  22.24   2.53 326.11  2.56   0.38  26.73 1.00      700      660
+#&gt;  lambda[6]  48.61  26.19 106.38 19.93   7.34 141.72 1.00      735      657
+#&gt;  lambda[7]  18.99   9.00  90.13  7.44   2.15  48.65 1.01      577      678
+#&gt;  lambda[8]  62.13  38.72  68.69 26.88  12.90 188.01 1.00      267      440
+#&gt;  lambda[9]  68.31  36.34 113.33 29.62   9.66 208.95 1.00      211      636
+#&gt; 
+#&gt;  # showing 10 of 315 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; 
+#&gt; $`2011-05-28`
+#&gt; $`2011-05-28`$nonparam
+#&gt;   variable   mean median    sd   mad     q5    q95 rhat ess_bulk ess_tail
+#&gt;  lp__      872.47 872.91  4.26  4.28 864.85 878.94 1.00      264      641
+#&gt;  lambda[1]   0.70   0.64  0.34  0.29   0.26   1.33 1.00      990      609
+#&gt;  lambda[2]   3.40   3.35  0.83  0.86   2.16   4.85 1.00      651      681
+#&gt;  lambda[3]   0.63   0.57  0.35  0.32   0.20   1.31 1.00      992      733
+#&gt;  lambda[4]   6.84   6.67  1.52  1.44   4.64   9.58 1.00      540      635
+#&gt;  lambda[5]   6.98   6.70  1.87  1.77   4.33  10.41 1.00      619      689
+#&gt;  lambda[6]  26.00  25.43  5.76  5.58  18.06  36.25 1.00      340      453
+#&gt;  lambda[7]  29.93  28.93  7.27  6.65  19.54  42.86 1.00      299      428
+#&gt;  lambda[8]  85.42  82.57 20.44 19.88  56.43 122.79 1.00      252      331
+#&gt;  lambda[9]  99.54  96.40 25.43 23.57  64.78 147.96 1.00      252      318
+#&gt; 
+#&gt;  # showing 10 of 67 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-05-28`$gom
+#&gt;   variable   mean median    sd   mad     q5    q95 rhat ess_bulk ess_tail
+#&gt;  lp__      908.91 909.35  2.95  2.79 903.72 913.04 1.00      360      531
+#&gt;  lambda[1]   1.01   0.90  0.56  0.52   0.31   2.10 1.00      582      453
+#&gt;  lambda[2]   4.90   4.75  1.40  1.32   2.93   7.36 1.00      394      450
+#&gt;  lambda[3]   0.94   0.83  0.53  0.45   0.29   1.91 1.00      567      587
+#&gt;  lambda[4]   9.94   9.55  2.74  2.51   6.30  14.76 1.00      289      470
+#&gt;  lambda[5]   9.76   9.33  3.00  2.76   5.60  15.11 1.00      290      531
+#&gt;  lambda[6]  35.03  33.78  9.01  8.42  22.53  52.06 1.00      209      320
+#&gt;  lambda[7]  37.40  35.96 10.85  9.13  23.24  57.29 1.00      219      394
+#&gt;  lambda[8]  99.78  94.94 28.89 24.83  60.49 154.27 1.00      202      327
+#&gt;  lambda[9] 113.94 108.75 34.53 32.35  68.11 176.80 1.00      195      334
+#&gt; 
+#&gt;  # showing 10 of 53 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-05-28`$gom_rw1
+#&gt;   variable   mean median    sd  mad     q5    q95 rhat ess_bulk ess_tail
+#&gt;  lp__      952.90 953.48  7.22 7.07 940.37 963.67 1.01      131      349
+#&gt;  lambda[1]   6.62   2.40 32.68 1.93   0.62  15.97 1.01      383      514
+#&gt;  lambda[2]  18.31  12.53 23.34 7.00   5.20  42.52 1.01      275      248
+#&gt;  lambda[3]   3.76   1.98  7.11 1.53   0.48  11.61 1.00      424      578
+#&gt;  lambda[4]  26.57  20.74 18.57 9.42  10.88  64.53 1.01      142      124
+#&gt;  lambda[5]  19.76  15.31 15.31 7.73   7.50  45.43 1.00      469      348
+#&gt;  lambda[6]  29.57  27.32 11.13 7.99  17.58  47.27 1.00      421      557
+#&gt;  lambda[7]  23.59  21.82  8.21 6.49  13.97  38.97 1.00      287      428
+#&gt;  lambda[8]  30.44  29.59  5.99 5.66  22.08  41.04 1.01      330      345
+#&gt;  lambda[9]  23.35  22.58  4.87 4.36  16.66  32.59 1.01      495      454
+#&gt; 
+#&gt;  # showing 10 of 377 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-05-28`$gom_ou
+#&gt;   variable   mean median    sd   mad     q5    q95 rhat ess_bulk ess_tail
+#&gt;  lp__      935.26 935.39  7.41  7.86 922.91 946.70 1.00      136      319
+#&gt;  lambda[1]   2.62   1.31  4.93  1.04   0.33   8.32 1.00      435      512
+#&gt;  lambda[2]  17.03  11.75 20.43  7.33   4.72  45.14 1.00      456      517
+#&gt;  lambda[3]   4.30   1.91 11.19  1.69   0.44  14.45 1.00      717      649
+#&gt;  lambda[4]  29.22  21.58 26.26 11.28   9.55  71.89 1.00      397      490
+#&gt;  lambda[5]  22.10  16.57 19.32  9.23   7.46  53.70 1.00      413      484
+#&gt;  lambda[6]  31.12  27.78 13.09  8.84  17.79  57.08 1.00      305      477
+#&gt;  lambda[7]  26.44  24.02 11.23  7.93  14.51  45.85 1.00      464      607
+#&gt;  lambda[8]  31.37  30.59  7.08  6.35  22.01  43.92 1.00      433      453
+#&gt;  lambda[9]  23.77  22.98  5.35  4.57  16.68  33.83 1.00      665      666
+#&gt; 
+#&gt;  # showing 10 of 381 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; 
+#&gt; $`2011-05-31`
+#&gt; $`2011-05-31`$nonparam
+#&gt;   variable    mean  median   sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      2475.19 2475.61 4.47 4.49 2467.55 2481.82 1.01      230      395
+#&gt;  lambda[1]    0.64    0.58 0.34 0.30    0.22    1.28 1.00      843      517
+#&gt;  lambda[2]    3.14    3.07 0.71 0.72    2.11    4.39 1.00      855      606
+#&gt;  lambda[3]    0.63    0.57 0.33 0.30    0.22    1.23 1.01      716      592
+#&gt;  lambda[4]    6.95    6.86 1.20 1.19    5.10    9.01 1.00      535      671
+#&gt;  lambda[5]    7.54    7.46 1.26 1.24    5.64    9.68 1.01      497      657
+#&gt;  lambda[6]   20.30   19.98 2.95 2.71   16.06   25.75 1.01      329      377
+#&gt;  lambda[7]   20.69   20.40 3.22 2.85   16.10   26.71 1.01      250      452
+#&gt;  lambda[8]   43.50   42.81 6.45 5.90   34.30   54.29 1.01      230      397
+#&gt;  lambda[9]   49.36   48.24 7.71 7.31   38.90   63.52 1.01      234      244
+#&gt; 
+#&gt;  # showing 10 of 73 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-05-31`$gom
+#&gt;   variable    mean  median   sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      2507.92 2508.26 3.14 3.00 2502.22 2512.34 1.00      422      695
+#&gt;  lambda[1]    0.72    0.67 0.35 0.34    0.27    1.41 1.00      852      776
+#&gt;  lambda[2]    3.45    3.38 0.84 0.80    2.22    4.86 1.01      342      762
+#&gt;  lambda[3]    0.70    0.63 0.37 0.31    0.25    1.39 1.01      683      388
+#&gt;  lambda[4]    7.54    7.43 1.42 1.34    5.50    9.95 1.01      262      491
+#&gt;  lambda[5]    8.25    8.09 1.39 1.40    6.22   10.73 1.01      304      448
+#&gt;  lambda[6]   21.73   21.48 3.13 3.29   17.19   27.37 1.01      172      508
+#&gt;  lambda[7]   21.52   21.26 3.27 3.32   16.61   27.77 1.01      162      407
+#&gt;  lambda[8]   44.01   43.50 6.12 5.84   34.92   54.74 1.02      146      223
+#&gt;  lambda[9]   48.66   48.18 7.31 7.11   38.16   61.41 1.02      146      328
+#&gt; 
+#&gt;  # showing 10 of 59 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-05-31`$gom_rw1
+#&gt;   variable    mean  median    sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      2600.12 2600.40  7.63 7.64 2587.42 2612.01 1.00      239      420
+#&gt;  lambda[1]    3.45    2.23  4.77 1.73    0.61    9.05 1.00      776      455
+#&gt;  lambda[2]   13.95   11.35 10.31 5.61    4.86   32.08 1.00      615      696
+#&gt;  lambda[3]    2.06    1.60  1.68 1.03    0.54    4.89 1.01      751      646
+#&gt;  lambda[4]   15.40   14.37  5.35 3.93    9.28   25.66 1.01      557      444
+#&gt;  lambda[5]   12.90   12.42  3.40 2.80    8.67   19.42 1.00      534      324
+#&gt;  lambda[6]   21.74   21.51  3.20 3.27   17.08   27.42 1.00      856      609
+#&gt;  lambda[7]   18.37   17.98  3.07 2.83   14.06   24.05 1.00     1002      708
+#&gt;  lambda[8]   26.58   26.52  2.82 2.80   22.26   31.18 1.00      803      769
+#&gt;  lambda[9]   25.34   25.03  3.03 2.80   20.84   30.86 1.00     1171      637
+#&gt; 
+#&gt;  # showing 10 of 443 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-05-31`$gom_ou
+#&gt;   variable    mean  median    sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      2577.93 2578.00  7.85 7.81 2565.08 2590.61 1.01      169      362
+#&gt;  lambda[1]    1.88    1.12  3.34 0.75    0.33    5.70 1.00      651      469
+#&gt;  lambda[2]   13.52    9.95 11.78 5.67    4.53   35.18 1.00      519      483
+#&gt;  lambda[3]    2.33    1.57  2.86 1.08    0.47    6.11 1.00      637      568
+#&gt;  lambda[4]   16.15   14.23  8.06 4.44    9.02   30.56 1.00      290      323
+#&gt;  lambda[5]   13.46   12.75  4.14 3.32    8.71   20.39 1.00      318      623
+#&gt;  lambda[6]   21.11   20.80  3.16 3.03   16.46   26.90 1.00      470      497
+#&gt;  lambda[7]   18.52   18.29  3.08 2.75   14.02   23.95 1.00      713      520
+#&gt;  lambda[8]   26.02   25.76  2.59 2.55   22.16   30.61 1.01      476      719
+#&gt;  lambda[9]   25.13   24.84  3.00 2.97   20.58   30.51 1.00      524      446
+#&gt; 
+#&gt;  # showing 10 of 447 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; 
+#&gt; $`2011-06-03`
+#&gt; $`2011-06-03`$nonparam
+#&gt;   variable    mean  median   sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      4706.14 4706.50 4.59 4.38 4697.87 4713.12 1.00      415      696
+#&gt;  lambda[1]    0.56    0.51 0.27 0.25    0.21    1.03 1.00     1326      819
+#&gt;  lambda[2]    2.72    2.67 0.60 0.61    1.81    3.72 1.00      703      702
+#&gt;  lambda[3]    0.54    0.50 0.28 0.26    0.19    1.09 1.00     1278      720
+#&gt;  lambda[4]    5.97    5.88 0.95 0.91    4.56    7.71 1.00      690      676
+#&gt;  lambda[5]    6.48    6.42 1.05 1.06    4.94    8.28 1.00     1025      680
+#&gt;  lambda[6]   17.01   16.90 1.93 1.90   13.99   20.29 1.00      543      716
+#&gt;  lambda[7]   17.06   16.93 1.82 1.84   14.30   20.17 1.00      519      555
+#&gt;  lambda[8]   31.63   31.63 2.85 2.82   27.19   36.45 1.00      388      599
+#&gt;  lambda[9]   35.73   35.54 3.52 3.55   30.20   41.86 1.00      336      591
+#&gt; 
+#&gt;  # showing 10 of 79 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-06-03`$gom
+#&gt;   variable    mean  median   sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      4740.87 4741.28 3.30 3.16 4734.70 4745.64 1.00      424      709
+#&gt;  lambda[1]    0.55    0.51 0.26 0.26    0.20    1.03 1.00     1301      605
+#&gt;  lambda[2]    2.63    2.61 0.57 0.56    1.78    3.64 1.00      786      616
+#&gt;  lambda[3]    0.55    0.51 0.27 0.24    0.20    1.04 1.00     1503      679
+#&gt;  lambda[4]    5.88    5.80 0.94 0.92    4.42    7.55 1.00      620      628
+#&gt;  lambda[5]    6.42    6.38 0.99 1.01    4.91    8.11 1.00      728      819
+#&gt;  lambda[6]   16.73   16.52 1.73 1.66   14.10   19.79 1.00      427      641
+#&gt;  lambda[7]   16.85   16.80 1.79 1.82   14.11   19.80 1.00      459      633
+#&gt;  lambda[8]   31.28   31.19 2.64 2.67   27.22   35.85 1.01      315      536
+#&gt;  lambda[9]   34.67   34.62 3.16 3.21   29.67   39.96 1.00      281      373
+#&gt; 
+#&gt;  # showing 10 of 65 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-06-03`$gom_rw1
+#&gt;   variable    mean  median    sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      4861.78 4862.43  8.63 8.11 4846.84 4874.76 1.00      143      352
+#&gt;  lambda[1]    3.30    2.07  8.09 1.39    0.61    9.23 1.00      747      548
+#&gt;  lambda[2]   13.82   11.30 10.86 5.50    4.95   32.90 1.00      619      647
+#&gt;  lambda[3]    2.20    1.68  2.00 1.05    0.59    5.51 1.00      774      638
+#&gt;  lambda[4]   16.05   14.95  5.11 4.35    9.72   25.60 1.00      601      661
+#&gt;  lambda[5]   13.33   12.90  3.54 3.26    8.88   20.00 1.00      507      486
+#&gt;  lambda[6]   21.29   21.06  2.82 2.67   17.09   26.51 1.00      733      534
+#&gt;  lambda[7]   18.64   18.42  2.18 2.10   15.47   22.48 1.00      750      625
+#&gt;  lambda[8]   27.20   27.13  2.19 2.13   23.72   30.92 1.01      991      551
+#&gt;  lambda[9]   28.14   28.02  2.36 2.17   24.45   32.15 1.00      776      807
+#&gt; 
+#&gt;  # showing 10 of 509 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-06-03`$gom_ou
+#&gt;   variable    mean  median    sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      4837.92 4838.48  9.00 9.74 4822.75 4851.12 1.00      153      345
+#&gt;  lambda[1]    1.65    1.01  2.63 0.71    0.30    4.81 1.00      667      620
+#&gt;  lambda[2]   13.44   10.11 11.49 5.80    4.25   33.57 1.00      778      589
+#&gt;  lambda[3]    2.55    1.69  3.30 1.15    0.46    7.09 1.00      803      502
+#&gt;  lambda[4]   17.08   15.58  6.58 5.18    9.22   29.84 1.00      981      562
+#&gt;  lambda[5]   14.55   13.69  4.65 3.75    8.97   23.27 1.01      769      620
+#&gt;  lambda[6]   21.21   20.87  3.03 2.76   16.79   26.64 1.00      631      605
+#&gt;  lambda[7]   18.78   18.65  2.30 2.34   15.27   22.59 1.00     1254      659
+#&gt;  lambda[8]   26.79   26.66  2.05 2.07   23.74   30.43 1.00     1038      445
+#&gt;  lambda[9]   28.13   27.95  2.47 2.37   24.42   32.62 1.00     1184      669
+#&gt; 
+#&gt;  # showing 10 of 513 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; 
+#&gt; $`2011-06-06`
+#&gt; $`2011-06-06`$nonparam
+#&gt;   variable    mean  median   sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      6890.99 6891.14 4.68 4.66 6882.68 6898.15 1.00      444      507
+#&gt;  lambda[1]    0.50    0.46 0.24 0.22    0.17    0.97 1.00     1482      700
+#&gt;  lambda[2]    2.49    2.46 0.57 0.56    1.62    3.50 1.00     1299      605
+#&gt;  lambda[3]    0.50    0.46 0.24 0.23    0.18    0.96 1.00     1296      697
+#&gt;  lambda[4]    5.42    5.37 0.85 0.87    4.12    6.94 1.00      926      601
+#&gt;  lambda[5]    5.95    5.93 0.91 0.94    4.57    7.53 1.00     1021      721
+#&gt;  lambda[6]   15.45   15.41 1.56 1.50   12.99   18.21 1.00      685      583
+#&gt;  lambda[7]   15.65   15.54 1.53 1.54   13.23   18.30 1.00      765      648
+#&gt;  lambda[8]   28.87   28.73 2.32 2.28   25.22   32.84 1.01      550      629
+#&gt;  lambda[9]   32.50   32.37 2.44 2.62   28.74   36.50 1.00      706      655
+#&gt; 
+#&gt;  # showing 10 of 85 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-06-06`$gom
+#&gt;   variable    mean  median   sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      6926.73 6927.17 3.69 3.62 6920.37 6932.06 1.00      387      585
+#&gt;  lambda[1]    0.50    0.46 0.25 0.22    0.17    0.98 1.00     1894      669
+#&gt;  lambda[2]    2.42    2.38 0.54 0.53    1.61    3.37 1.01      894      676
+#&gt;  lambda[3]    0.51    0.48 0.24 0.23    0.20    0.94 1.00      978      675
+#&gt;  lambda[4]    5.31    5.26 0.89 0.89    3.93    6.82 1.00     1092      672
+#&gt;  lambda[5]    5.77    5.75 0.84 0.81    4.47    7.25 1.00     1108      662
+#&gt;  lambda[6]   15.11   15.09 1.46 1.42   12.68   17.55 1.00      968      821
+#&gt;  lambda[7]   15.21   15.13 1.42 1.43   12.95   17.59 1.00      816      700
+#&gt;  lambda[8]   28.17   28.14 2.20 2.20   24.65   31.80 1.01      569      705
+#&gt;  lambda[9]   31.75   31.64 2.26 2.27   28.38   35.74 1.00      537      595
+#&gt; 
+#&gt;  # showing 10 of 71 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-06-06`$gom_rw1
+#&gt;   variable    mean  median   sd  mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      7064.79 7065.29 9.76 9.15 7048.55 7080.57 1.00      172      328
+#&gt;  lambda[1]    3.33    2.01 5.08 1.45    0.59    9.82 1.00      728      722
+#&gt;  lambda[2]   13.57   11.10 9.38 5.59    4.99   31.77 1.00      493      513
+#&gt;  lambda[3]    2.18    1.68 1.93 1.07    0.51    5.35 1.00      765      589
+#&gt;  lambda[4]   16.46   15.37 6.03 4.66    9.67   27.25 1.00      415      284
+#&gt;  lambda[5]   13.62   12.71 4.31 3.22    8.54   21.44 1.00      565      422
+#&gt;  lambda[6]   21.79   21.48 3.03 2.77   17.25   26.99 1.00      617      511
+#&gt;  lambda[7]   18.86   18.71 2.20 2.16   15.49   22.54 1.00      810      746
+#&gt;  lambda[8]   27.58   27.51 2.34 2.26   24.01   31.67 1.00      820      527
+#&gt;  lambda[9]   29.66   29.51 2.31 2.32   26.03   33.55 1.00     1144      785
+#&gt; 
+#&gt;  # showing 10 of 575 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2011-06-06`$gom_ou
+#&gt;   variable    mean  median   sd   mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      7041.14 7041.85 9.70 10.12 7024.05 7055.70 1.01      183      421
+#&gt;  lambda[1]    1.22    0.90 1.23  0.59    0.31    2.97 1.00      837      602
+#&gt;  lambda[2]   11.72    9.18 8.97  4.89    4.08   28.72 1.00      622      819
+#&gt;  lambda[3]    2.26    1.62 2.32  1.07    0.49    6.01 1.00      811      660
+#&gt;  lambda[4]   17.52   16.07 7.07  5.32    9.90   29.40 1.00      777      679
+#&gt;  lambda[5]   14.90   13.88 4.83  3.79    9.12   23.54 1.00      662      595
+#&gt;  lambda[6]   21.79   21.49 3.20  3.12   17.07   27.49 1.00      951      803
+#&gt;  lambda[7]   19.24   19.05 2.47  2.32   15.70   23.62 1.00      973      648
+#&gt;  lambda[8]   27.21   27.16 2.22  2.16   23.61   31.08 1.00      983      675
+#&gt;  lambda[9]   29.73   29.54 2.48  2.43   26.11   33.94 1.00      869      728
+#&gt; 
+#&gt;  # showing 10 of 579 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)</code></pre>
+</div>
+<div id="save-mcmc-samples" class="section level2">
+<h2>Save mcmc samples</h2>
+<pre class="r"><code>saveRDS(samples_list, file.path(path_modelled, &quot;huso104_20110512_20110606_mcmc.rds&quot;))</code></pre>
+</div>
+<div id="time-to-execute-the-task" class="section level2">
+<h2>Time to execute the task</h2>
+<p>Only useful when executed with <code>Rscript</code>.</p>
+<pre class="r"><code>proc.time()</code></pre>
+<pre><code>#&gt;    user  system elapsed 
+#&gt;  26.982   0.850  33.282</code></pre>
+</div>
