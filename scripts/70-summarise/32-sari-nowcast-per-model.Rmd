@@ -1,11 +1,10 @@
 ---
-title: "SARI: Visualize nowcasting results per reference date"
+title: "SARI: Visualize nowcasting results by model and reference date"
 prerequisites:
     - data/processed/sari_41002_20090614_20091122.rds
     - data/modelled/sari_41002_20090614_20091122_mcmc.rds
 targets:
     - data/figures/sari_nowcast.png
-makefile: false
 ---
 
 ```{r setup, include = FALSE}
@@ -22,7 +21,6 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(cmdstanr)
-library(latex2exp)
 
 path_proj <- here::here()
 path_src <- file.path(path_proj, "src")
@@ -46,8 +44,7 @@ Obtain summarised date for reported cases and baseline cases, and summarise the 
 results from the mcmc samples.
 
 ```{r}
-sari_summary <- mutate(sari, cases_baseline = notifications) |>
-    reporcases_periods(names(sari_mcmc))
+sari_summary <- reporcases_periods(sari, names(sari_mcmc))
 sari_summary
 
 sari_nowcast <- nowcast_periods(sari_mcmc, date_by = "1 week")
@@ -63,7 +60,7 @@ model_labels <- c(
   "exp_rw1"   = "bold('M3:'~q[t](d)~'with random walks')",
   "exp_ou"    = "bold('M4:'~q[t](d)~'with OU processes')"
 )
-p <- plot_nowcast(sari_nowcast, sari_summary, model_labels = model_labels, model_colors = NULL)
+p <- plot_nowcast(sari_nowcast, sari_summary, model_labels = model_labels)
 p
 
 ggsave(file.path(path_figures, "sari_nowcast.png"), p,

@@ -4,7 +4,6 @@ prerequisites:
     - data/processed/sari_41002_20090614_20091122.rds
 targets:
     - data/modelled/sari_41002_20090614_20091122_mcmc.rds
-makefile: false
 ---
 
 ```{r setup, include = FALSE}
@@ -32,7 +31,6 @@ path_samples_sari <- file.path(path_data, "draws", "sari")
 
 source(file.path(path_src, "20-processing.R"))
 source(file.path(path_src, "30-eda.R"))
-source(file.path(path_src, "fit_function.R"))
 source(file.path(path_src, "50-modelling.R"))
 
 sari <- readRDS(file.path(path_processed, "sari_41002_20090614_20091122.rds"))

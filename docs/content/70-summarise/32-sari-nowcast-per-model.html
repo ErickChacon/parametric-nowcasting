@@ -1,5 +1,5 @@
 ---
-title: "SARI: Visualize nowcasting results per reference date"
+title: "SARI: Visualize nowcasting results by model and reference date"
 prerequisites:
     - data/processed/sari_41002_20090614_20091122.rds
     - data/modelled/sari_41002_20090614_20091122_mcmc.rds
@@ -28,9 +28,7 @@ library(cmdstanr)</code></pre>
 <pre><code>#&gt; - CmdStanR documentation and vignettes: mc-stan.org/cmdstanr</code></pre>
 <pre><code>#&gt; - CmdStan path: /usr/share/cmdstan/cmdstan-2.36.0</code></pre>
 <pre><code>#&gt; - CmdStan version: 2.36.0</code></pre>
-<pre class="r"><code>library(latex2exp)
-
-path_proj &lt;- here::here()
+<pre class="r"><code>path_proj &lt;- here::here()
 path_src &lt;- file.path(path_proj, &quot;src&quot;)
 path_data &lt;- file.path(path_proj, &quot;data&quot;)
 path_processed &lt;- file.path(path_data, &quot;processed&quot;)
@@ -49,8 +47,7 @@ sari_mcmc &lt;- readRDS(file.path(path_modelled, &quot;sari_41002_20090614_20091
 <h2>Processing results</h2>
 <p>Obtain summarised date for reported cases and baseline cases, and summarise the nowcasting
 results from the mcmc samples.</p>
-<pre class="r"><code>sari_summary &lt;- mutate(sari, cases_baseline = notifications) |&gt;
-    reporcases_periods(names(sari_mcmc))
+<pre class="r"><code>sari_summary &lt;- reporcases_periods(sari, names(sari_mcmc))
 sari_summary</code></pre>
 <pre><code>#&gt; # A tibble: 80 × 4
 #&gt;    date_end   date       cases_reported cases_baseline
@@ -69,18 +66,18 @@ sari_summary</code></pre>
 <pre class="r"><code>sari_nowcast &lt;- nowcast_periods(sari_mcmc, date_by = &quot;1 week&quot;)
 sari_nowcast</code></pre>
 <pre><code>#&gt; # A tibble: 320 × 6
-#&gt;    date_end   model    date           mean  lower  upper
-#&gt;    &lt;date&gt;     &lt;fct&gt;    &lt;date&gt;        &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
-#&gt;  1 2009-08-02 nonparam 2009-06-14    12.1     4      26 
-#&gt;  2 2009-08-02 nonparam 2009-06-21    29.1    13      53 
-#&gt;  3 2009-08-02 nonparam 2009-06-28    85.0    47     142 
-#&gt;  4 2009-08-02 nonparam 2009-07-05    92.4    50.0   155.
-#&gt;  5 2009-08-02 nonparam 2009-07-12    76.1    40.0   135 
-#&gt;  6 2009-08-02 nonparam 2009-07-19   283.    155.    475.
-#&gt;  7 2009-08-02 nonparam 2009-07-26  2312.   1282.   3848.
-#&gt;  8 2009-08-02 nonparam 2009-08-02 14230.   7502.  25236.
-#&gt;  9 2009-08-02 exp      2009-06-14     4.68    1      10 
-#&gt; 10 2009-08-02 exp      2009-06-21    10.6     4      19 
+#&gt;    date_end   model    date           mean lower   upper
+#&gt;    &lt;date&gt;     &lt;fct&gt;    &lt;date&gt;        &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
+#&gt;  1 2009-08-02 nonparam 2009-06-14    11.7     4     24  
+#&gt;  2 2009-08-02 nonparam 2009-06-21    27.8    13     49.0
+#&gt;  3 2009-08-02 nonparam 2009-06-28    83.6    44    136  
+#&gt;  4 2009-08-02 nonparam 2009-07-05    88.8    48    152. 
+#&gt;  5 2009-08-02 nonparam 2009-07-12    73.9    37    126  
+#&gt;  6 2009-08-02 nonparam 2009-07-19   277.    148    463. 
+#&gt;  7 2009-08-02 nonparam 2009-07-26  2248.   1188.  3888. 
+#&gt;  8 2009-08-02 nonparam 2009-08-02 13886.   7178. 25305. 
+#&gt;  9 2009-08-02 exp      2009-06-14     4.68    1     10  
+#&gt; 10 2009-08-02 exp      2009-06-21    11.1     4     20  
 #&gt; # ℹ 310 more rows</code></pre>
 </div>
 <div id="visualize-nowcasting-per-reference-date" class="section level2">
@@ -91,7 +88,7 @@ sari_nowcast</code></pre>
   &quot;exp_rw1&quot;   = &quot;bold(&#39;M3:&#39;~q[t](d)~&#39;with random walks&#39;)&quot;,
   &quot;exp_ou&quot;    = &quot;bold(&#39;M4:&#39;~q[t](d)~&#39;with OU processes&#39;)&quot;
 )
-p &lt;- plot_nowcast(sari_nowcast, sari_summary, model_labels = model_labels, model_colors = NULL)</code></pre>
+p &lt;- plot_nowcast(sari_nowcast, sari_summary, model_labels = model_labels)</code></pre>
 <pre><code>#&gt; Warning: A numeric `legend.position` argument in `theme()` was deprecated in ggplot2 3.5.0.
 #&gt; ℹ Please use the `legend.position.inside` argument of `theme()` instead.
 #&gt; This warning is displayed once every 8 hours.
@@ -101,7 +98,7 @@ p &lt;- plot_nowcast(sari_nowcast, sari_summary, model_labels = model_labels, mo
 #&gt; ℹ Please ensure your variables are compatible before plotting (location: `combine_vars()`)
 #&gt; This warning is displayed once every 8 hours.
 #&gt; Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.</code></pre>
-<p><img src="/parametric-nowcasting/70-summarise/32-sari-nowcast-summary_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p><img src="/parametric-nowcasting/70-summarise/32-sari-nowcast-per-model_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>ggsave(file.path(path_figures, &quot;sari_nowcast.png&quot;), p,
        width = 8, height = 6, dpi = 300)</code></pre>
 </div>
@@ -110,5 +107,5 @@ p &lt;- plot_nowcast(sari_nowcast, sari_summary, model_labels = model_labels, mo
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   3.164   0.411   4.193</code></pre>
+#&gt;   3.090   0.400   4.758</code></pre>
 </div>

@@ -5,7 +5,6 @@ prerequisites:
     - data/modelled/sari_41002_20090614_20091122_mcmc.rds
 targets:
     - data/figures/sari_reported_fitted_curves.png
-makefile: false
 ---
 
 ```{r setup, include = FALSE}
@@ -37,19 +36,18 @@ source(file.path(path_src, "50-modelling.R"))
 source(file.path(path_src, "60-summarise.R"))
 
 sari <- readRDS(file.path(path_processed, "sari_41002_20090614_20091122.rds"))
-str(sari)
-sari_mcmc <- readRDS(file.path(path_modelled, "sari_20090614_20091122_mcmc.rds"))
+sari
+sari_mcmc <- readRDS(file.path(path_modelled, "sari_41002_20090614_20091122_mcmc.rds"))
 names(sari_mcmc)
 ```
 
 ## Sari data in long format
 
 ```{r}
-last_date <- max(sari$date)
-sari_long <- reporcases_longer(sari) |>
-    mutate(available_delay = floor(as.numeric(last_date - date) / 7 )) |>
+sari_long <- sari |>
+    mutate(available_delay = seq(n()-1, 0)) |>
+    reporcases_longer() |>
     filter(delay <= available_delay)
-sari_long
 ```
 
 ## Predicted mean in long format
