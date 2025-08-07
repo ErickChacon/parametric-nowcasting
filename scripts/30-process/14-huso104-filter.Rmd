@@ -13,6 +13,8 @@ knitr::opts_chunk$set(comment = "#>")
 options(width = 100)
 ```
 
+Filter HusO104 data for the dates of interest and prepare for analysis.
+
 ## Load packages, scripts and data
 
 ```{r}
@@ -30,6 +32,7 @@ huso <- path_cleaned |>
     readr::read_csv() |>
     as_tibble() |>
     rename(date = `...1`)
+names(huso)
 ```
 
 ## Process data
@@ -40,7 +43,8 @@ huso <- path_cleaned |>
 date_period <- as.Date(c("2011-05-12", "2011-06-06"))
 huso <- huso |>
     filter(date >= date_period[1], date <= date_period[2]) |>
-    as_tibble()
+    mutate(cases_baseline = delay15)
+huso
 ```
 
 ## Save processed data

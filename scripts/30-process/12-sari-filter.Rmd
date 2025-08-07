@@ -13,6 +13,8 @@ knitr::opts_chunk$set(comment = "#>")
 options(width = 100)
 ```
 
+Filter SARI data for the dates of interest and prepare for analysis.
+
 ## Load packages, scripts and data
 
 ```{r}
@@ -29,6 +31,7 @@ path_processed <- file.path(path_data, "processed")
 sari <- path_cleaned |>
     file.path("clean_data_srag_epiweek_delay_table_PR.csv") |>
     readr::read_csv()
+names(sari)
 ```
 
 ## Process data
@@ -44,15 +47,17 @@ sari_41002 <- sari |>
     rename_with(tolower) |>
     mutate(date = get_date(week = epiweek, year = epiyear, start = 7)) |>
     filter(regionalsaude == 41002, date >= date_period[1], date <= date_period[2]) |>
-    select(- c("epiweek", "epiyear", "regionalsaude")) |>
+    select(- c("epiweek", "epiyear", "regionalsaude", "notifications_within_26w")) |>
     rename_with(function(x) gsub("d", "delay", x), d0:d26) |>
-    relocate(notifications_within_26w, notifications, .after = last_col())
+    relocate(date) |>
+    relocate(cases_baseline = notifications, .after = last_col())
 ```
 
 Compute the cumulative number of cases.
 
 ```{r}
-sari_41002[, 1:27] <- t(apply(as.matrix(sari_41002[, 1:27]), 1, cumsum))
+D <- 26
+sari_41002[, 2:(D+2)] <- t(apply(as.matrix(sari_41002[, 2:(D+2)]), 1, cumsum))
 sari_41002
 ```
 
