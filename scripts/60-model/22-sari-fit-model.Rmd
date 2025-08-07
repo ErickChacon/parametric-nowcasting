@@ -1,9 +1,9 @@
 ---
 title: "SARI: Model fitting"
 prerequisites:
-    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+    - data/processed/sari_41002_20090614_20091122.rds
 targets:
-    - data/modelled/sari_20090614_20091122_samples.rds
+    - data/modelled/sari_41002_20090614_20091122_mcmc.rds
 ---
 
 ```{r setup, include = FALSE}
@@ -34,11 +34,11 @@ source(file.path(path_src, "30-eda.R"))
 source(file.path(path_src, "fit_function.R"))
 source(file.path(path_src, "50-modelling.R"))
 
-sari <- readRDS(file.path(path_processed, "sari_cum_2009_06_14_to_11_22.rds"))
+sari <- readRDS(file.path(path_processed, "sari_41002_20090614_20091122.rds"))
 range(sari$date)
 ```
 
-## Load models
+## Load and compile models
 
 ```{r}
 model_names <- c("nonparam", "exp", "exp_rw1", "exp_ou")
@@ -49,14 +49,29 @@ models <- file.path(path_models, paste0(model_names, ".stan")) |>
 
 ## Fit models
 
+
+Evaluate the priors for the cumulative reporting probability curves.
+
+```{r}
+hypers <- hypers_q(phi_ref = 0.2, D_ref = 26, type = "exponential", alpha_phi = 1.4, sd_log_b = 0.5, delay_seq = 0:26)
+hypers
+```
+
+Obtain mcmc samples for selected models assuming different ending times.
+
 ```{r}
 D <- 26
-hypers <- hypers_q(phi_ref = 0.2, D_ref = D, type = "exponential", alpha_phi = 1.4, sd_log_b = 0.5, delay_seq = 0:D)
 end_dates <- seq(as.Date("2009-08-02"), as.Date("2009-11-22"), by = "4 week")
-samples_list <- nowcast_samples_dates(sari, models, hypers, end_dates, 26,
+samples_list <- nowcast_sample_dates(sari, models, hypers, end_dates, D,
     iter_sampling = 1000, iter_warmup = 500, chains = 1, refresh = 200, thin = 1,
     output_dir = path_samples_sari)
-saveRDS(samples_list, file.path(path_modelled, "sari_20090614_20091122_samples.rds"))
+samples_list
+```
+
+## Save mcmc samples
+
+```{r}
+saveRDS(samples_list, file.path(path_modelled, "sari_41002_20090614_20091122_mcmc.rds"))
 ```
 
 ## Time to execute the task

@@ -1,0 +1,154 @@
+---
+title: "SARI: Visualize fitted reported cases"
+prerequisites:
+    - data/processed/sari_41002_20090614_20091122.rds
+    - data/modelled/sari_41002_20090614_20091122_mcmc.rds
+targets:
+    - data/figures/sari_reported_fitted_curves.png
+---
+
+
+
+<div id="load-packages-scripts-and-data" class="section level2">
+<h2>Load packages, scripts and data</h2>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>#&gt; 
+#&gt; Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:stats&#39;:
+#&gt; 
+#&gt;     filter, lag</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:base&#39;:
+#&gt; 
+#&gt;     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)
+library(ggplot2)
+library(cmdstanr)</code></pre>
+<pre><code>#&gt; CmdStan path set to: /usr/share/cmdstan/cmdstan-2.36.0</code></pre>
+<pre><code>#&gt; This is cmdstanr version 0.9.0</code></pre>
+<pre><code>#&gt; - CmdStanR documentation and vignettes: mc-stan.org/cmdstanr</code></pre>
+<pre><code>#&gt; - CmdStan path: /usr/share/cmdstan/cmdstan-2.36.0</code></pre>
+<pre><code>#&gt; - CmdStan version: 2.36.0</code></pre>
+<pre class="r"><code>library(latex2exp)
+
+path_proj &lt;- here::here()
+path_src &lt;- file.path(path_proj, &quot;src&quot;)
+path_data &lt;- file.path(path_proj, &quot;data&quot;)
+path_processed &lt;- file.path(path_data, &quot;processed&quot;)
+path_modelled &lt;- file.path(path_data, &quot;modelled&quot;)
+path_figures &lt;- file.path(path_data, &quot;figures&quot;)
+
+source(file.path(path_src, &quot;20-processing.R&quot;))
+source(file.path(path_src, &quot;30-eda.R&quot;))
+source(file.path(path_src, &quot;50-modelling.R&quot;))
+source(file.path(path_src, &quot;60-summarise.R&quot;))
+
+sari &lt;- readRDS(file.path(path_processed, &quot;sari_41002_20090614_20091122.rds&quot;))
+str(sari)</code></pre>
+<pre><code>#&gt; tibble [24 × 30] (S3: tbl_df/tbl/data.frame)
+#&gt;  $ delay0                  : num [1:24] 0 2 2 14 2 2 32 272 183 145 ...
+#&gt;  $ delay1                  : num [1:24] 3 4 13 16 11 18 329 563 549 417 ...
+#&gt;  $ delay2                  : num [1:24] 3 5 17 17 11 91 463 749 767 510 ...
+#&gt;  $ delay3                  : num [1:24] 3 7 21 18 25 154 519 932 893 573 ...
+#&gt;  $ delay4                  : num [1:24] 3 7 22 19 39 ...
+#&gt;  $ delay5                  : num [1:24] 3 9 30 22 47 ...
+#&gt;  $ delay6                  : num [1:24] 3 12 35 23 53 ...
+#&gt;  $ delay7                  : num [1:24] 6 15 39 25 56 ...
+#&gt;  $ delay8                  : num [1:24] 7 15 39 26 58 ...
+#&gt;  $ delay9                  : num [1:24] 7 16 41 26 58 ...
+#&gt;  $ delay10                 : num [1:24] 7 16 41 27 58 ...
+#&gt;  $ delay11                 : num [1:24] 8 16 41 27 58 ...
+#&gt;  $ delay12                 : num [1:24] 8 16 41 27 59 ...
+#&gt;  $ delay13                 : num [1:24] 8 16 41 27 60 ...
+#&gt;  $ delay14                 : num [1:24] 8 16 41 27 61 ...
+#&gt;  $ delay15                 : num [1:24] 8 16 41 27 61 ...
+#&gt;  $ delay16                 : num [1:24] 8 16 41 27 64 ...
+#&gt;  $ delay17                 : num [1:24] 8 17 42 27 64 ...
+#&gt;  $ delay18                 : num [1:24] 8 17 44 27 64 ...
+#&gt;  $ delay19                 : num [1:24] 8 18 44 27 64 ...
+#&gt;  $ delay20                 : num [1:24] 8 18 44 27 64 ...
+#&gt;  $ delay21                 : num [1:24] 8 18 44 28 64 ...
+#&gt;  $ delay22                 : num [1:24] 8 18 45 29 64 ...
+#&gt;  $ delay23                 : num [1:24] 8 19 46 29 64 ...
+#&gt;  $ delay24                 : num [1:24] 8 19 46 30 64 ...
+#&gt;  $ delay25                 : num [1:24] 8 19 46 30 64 ...
+#&gt;  $ delay26                 : num [1:24] 8 19 46 30 64 ...
+#&gt;  $ date                    : Date[1:24], format: &quot;2009-06-14&quot; &quot;2009-06-21&quot; &quot;2009-06-28&quot; ...
+#&gt;  $ notifications_within_26w: num [1:24] 8 19 46 30 64 ...
+#&gt;  $ notifications           : num [1:24] 8 19 46 30 64 ...</code></pre>
+<pre class="r"><code>sari_mcmc &lt;- readRDS(file.path(path_modelled, &quot;sari_20090614_20091122_mcmc.rds&quot;))
+names(sari_mcmc)</code></pre>
+<pre><code>#&gt; [1] &quot;2009-08-02&quot; &quot;2009-08-30&quot; &quot;2009-09-27&quot; &quot;2009-10-25&quot; &quot;2009-11-22&quot;</code></pre>
+</div>
+<div id="sari-data-in-long-format" class="section level2">
+<h2>Sari data in long format</h2>
+<pre class="r"><code>last_date &lt;- max(sari$date)
+sari_long &lt;- reporcases_longer(sari) |&gt;
+    mutate(available_delay = floor(as.numeric(last_date - date) / 7 )) |&gt;
+    filter(delay &lt;= available_delay)
+sari_long</code></pre>
+<pre><code>#&gt; # A tibble: 300 × 6
+#&gt;    date       notifications_within_26w notifications delay cases available_delay
+#&gt;    &lt;date&gt;                        &lt;dbl&gt;         &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;
+#&gt;  1 2009-06-14                        8             8     0     0              23
+#&gt;  2 2009-06-14                        8             8     1     3              23
+#&gt;  3 2009-06-14                        8             8     2     3              23
+#&gt;  4 2009-06-14                        8             8     3     3              23
+#&gt;  5 2009-06-14                        8             8     4     3              23
+#&gt;  6 2009-06-14                        8             8     5     3              23
+#&gt;  7 2009-06-14                        8             8     6     3              23
+#&gt;  8 2009-06-14                        8             8     7     6              23
+#&gt;  9 2009-06-14                        8             8     8     7              23
+#&gt; 10 2009-06-14                        8             8     9     7              23
+#&gt; # ℹ 290 more rows</code></pre>
+</div>
+<div id="predicted-mean-in-long-format" class="section level2">
+<h2>Predicted mean in long format</h2>
+<p>We select the last period which include all the data, and obtain predictive mean for all
+models in long format data frame.</p>
+<pre class="r"><code># select model for date
+index &lt;- length(sari_mcmc)
+first_date &lt;- min(sari$date)
+last_date &lt;- as.Date(names(sari_mcmc)[index])
+dates &lt;- seq(first_date, last_date, by = &quot;1 week&quot;)
+
+# prediction in long format
+pred_long &lt;- predmean_df(sari_mcmc[[index]], delays = 0:26, dates, &quot;exponential&quot;)
+pred_long</code></pre>
+<pre><code>#&gt; # A tibble: 2,592 × 4
+#&gt;    method   date       delay cases
+#&gt;    &lt;fct&gt;    &lt;date&gt;     &lt;dbl&gt; &lt;dbl&gt;
+#&gt;  1 nonparam 2009-06-14     0  1.26
+#&gt;  2 nonparam 2009-06-14     1  3.12
+#&gt;  3 nonparam 2009-06-14     2  4.12
+#&gt;  4 nonparam 2009-06-14     3  4.87
+#&gt;  5 nonparam 2009-06-14     4  5.40
+#&gt;  6 nonparam 2009-06-14     5  5.70
+#&gt;  7 nonparam 2009-06-14     6  5.94
+#&gt;  8 nonparam 2009-06-14     7  6.16
+#&gt;  9 nonparam 2009-06-14     8  6.39
+#&gt; 10 nonparam 2009-06-14     9  6.48
+#&gt; # ℹ 2,582 more rows</code></pre>
+</div>
+<div id="visualize-curves" class="section level2">
+<h2>Visualize curves</h2>
+<pre class="r"><code>p &lt;- plot_predmean(sari_long, pred_long)
+p</code></pre>
+<pre><code>#&gt; `geom_line()`: Each group consists of only one observation.
+#&gt; ℹ Do you need to adjust the group aesthetic?</code></pre>
+<pre><code>#&gt; Warning: Removed 12 rows containing missing values or values outside the scale range
+#&gt; (`geom_line()`).</code></pre>
+<p><img src="/parametric-nowcasting/70-summarise/22-sari-model-adequacy_files/figure-html/unnamed-chunk-4-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggsave(file.path(path_figures, &quot;sari_reported_fitted_curves.png&quot;), p,
+     width = 8, height = 5.5, dpi = 300)</code></pre>
+<pre><code>#&gt; `geom_line()`: Each group consists of only one observation.
+#&gt; ℹ Do you need to adjust the group aesthetic?</code></pre>
+<pre><code>#&gt; Warning: Removed 12 rows containing missing values or values outside the scale range
+#&gt; (`geom_line()`).</code></pre>
+</div>
+<div id="time-to-execute-the-task" class="section level2">
+<h2>Time to execute the task</h2>
+<p>Only useful when executed with <code>Rscript</code>.</p>
+<pre class="r"><code>proc.time()</code></pre>
+<pre><code>#&gt;    user  system elapsed 
+#&gt;   3.632   0.389   4.671</code></pre>
+</div>

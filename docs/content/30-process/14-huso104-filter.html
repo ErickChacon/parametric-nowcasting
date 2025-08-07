@@ -3,7 +3,7 @@ title: "Prepare HusO104 data"
 prerequisites:
     - data/cleaned/husO104_tri_cumu.csv
 targets:
-    - data/processed/huso104_cum_2011_05_12_to_06_06.rds
+    - data/processed/huso104_20110512_20110606.rds
 ---
 
 
@@ -35,7 +35,7 @@ huso &lt;- path_cleaned |&gt;
 <pre><code>#&gt; New names:
 #&gt; • `` -&gt; `...1`</code></pre>
 <pre><code>#&gt; Rows: 59 Columns: 17
-#&gt; ── Column specification ──────────────────────────────────────────────────────────────────────
+#&gt; ── Column specification ────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 #&gt; Delimiter: &quot;,&quot;
 #&gt; dbl  (16): delay0, delay1, delay2, delay3, delay4, delay5, delay6, delay7, delay8, delay9, delay...
 #&gt; date  (1): ...1
@@ -55,12 +55,12 @@ huso &lt;- huso |&gt;
 </div>
 <div id="save-processed-data" class="section level2">
 <h2>Save processed data</h2>
-<pre class="r"><code>saveRDS(huso, file.path(path_processed, &quot;huso104_cum_2011_05_12_to_06_06.rds&quot;))</code></pre>
+<pre class="r"><code>saveRDS(huso, file.path(path_processed, &quot;huso104_20110512_20110606.rds&quot;))</code></pre>
 </div>
 <div id="time-to-execute-the-task" class="section level2">
 <h2>Time to execute the task</h2>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   0.582   0.320   0.580</code></pre>
+#&gt;   0.612   0.323   0.614</code></pre>
 </div>

@@ -1,7 +1,7 @@
 ---
 title: "SARI: Compare growth curves"
 prerequisites:
-    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+    - data/processed/sari_41002_20090614_20091122.rds
 targets:
     - data/figures/sari_qd_comparison.png
 ---
@@ -31,7 +31,7 @@ path_figures <- file.path(path_data, "figures")
 source(file.path(path_src, "20-processing.R"))
 source(file.path(path_src, "30-eda.R"))
 
-sari <- readRDS(file.path(path_processed, "sari_cum_2009_06_14_to_11_22.rds"))
+sari <- readRDS(file.path(path_processed, "sari_41002_20090614_20091122.rds"))
 ```
 
 ## Convert to long format

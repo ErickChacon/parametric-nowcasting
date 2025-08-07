@@ -1,8 +1,8 @@
 ---
 title: "Fitting example of cumulative reporting probability"
 prerequisites:
-    - data/processed/huso104_cum_2011_05_12_to_06_06.rds
-    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+    - data/processed/huso104_20110512_20110606.rds
+    - data/processed/sari_41002_20090614_20091122.rds
 targets:
     - data/figures/qd_example_sari_huso104.png
 ---
@@ -36,8 +36,8 @@ path_figures &lt;- file.path(path_data, &quot;figures&quot;)
 source(file.path(path_src, &quot;20-processing.R&quot;))
 source(file.path(path_src, &quot;30-eda.R&quot;))
 
-huso &lt;- readRDS(file.path(path_processed, &quot;huso104_cum_2011_05_12_to_06_06.rds&quot;))
-sari &lt;- readRDS(file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))</code></pre>
+huso &lt;- readRDS(file.path(path_processed, &quot;huso104_20110512_20110606.rds&quot;))
+sari &lt;- readRDS(file.path(path_processed, &quot;sari_41002_20090614_20091122.rds&quot;))</code></pre>
 </div>
 <div id="convert-to-long-format-and-filter" class="section level2">
 <h2>Convert to long format and filter</h2>
@@ -117,5 +117,5 @@ p &lt;- plot_compare_curves(df_train, df_fit, mylabs) +
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   1.089   0.326   1.097</code></pre>
+#&gt;   1.208   0.311   1.205</code></pre>
 </div>

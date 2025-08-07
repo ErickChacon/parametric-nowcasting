@@ -1,7 +1,7 @@
 ---
 title: "Exploratory analysis of SARI reported cases"
 prerequisites:
-    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+    - data/processed/sari_41002_20090614_20091122.rds
 targets:
     - data/figures/sari_reported_cases.png
 ---
@@ -33,7 +33,7 @@ path_figures &lt;- file.path(path_data, &quot;figures&quot;)
 source(file.path(path_src, &quot;20-processing.R&quot;))
 source(file.path(path_src, &quot;30-eda.R&quot;))
 
-sari &lt;- readRDS(file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))</code></pre>
+sari &lt;- readRDS(file.path(path_processed, &quot;sari_41002_20090614_20091122.rds&quot;))</code></pre>
 </div>
 <div id="convert-to-long-format" class="section level2">
 <h2>Convert to long format</h2>
@@ -61,5 +61,5 @@ p</code></pre>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   2.423   0.330   2.440</code></pre>
+#&gt;   2.621   0.321   2.650</code></pre>
 </div>

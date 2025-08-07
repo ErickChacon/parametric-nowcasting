@@ -1,7 +1,7 @@
 ---
 title: "Exploratory analysis of HusO104 hospitalizations"
 prerequisites:
-    - data/processed/huso104_cum_2011_05_12_to_06_06.rds
+    - data/processed/huso104_20110512_20110606.rds
 targets:
     - data/figures/huso104_reported_cases.png
 ---
@@ -33,7 +33,7 @@ path_figures &lt;- file.path(path_data, &quot;figures&quot;)
 source(file.path(path_src, &quot;20-processing.R&quot;))
 source(file.path(path_src, &quot;30-eda.R&quot;))
 
-huso &lt;- readRDS(file.path(path_processed, &quot;huso104_cum_2011_05_12_to_06_06.rds&quot;))</code></pre>
+huso &lt;- readRDS(file.path(path_processed, &quot;huso104_20110512_20110606.rds&quot;))</code></pre>
 </div>
 <div id="convert-to-long-format" class="section level2">
 <h2>Convert to long format</h2>
@@ -62,5 +62,5 @@ p</code></pre>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   2.613   0.313   2.612</code></pre>
+#&gt;   2.641   0.335   2.663</code></pre>
 </div>

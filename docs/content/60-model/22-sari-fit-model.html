@@ -1,0 +1,762 @@
+---
+title: "SARI: Model fitting"
+prerequisites:
+    - data/processed/sari_41002_20090614_20091122.rds
+targets:
+    - data/modelled/sari_41002_20090614_20091122_mcmc.rds
+---
+
+
+
+<div id="load-packages-scripts-and-data" class="section level2">
+<h2>Load packages, scripts and data</h2>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>#&gt; 
+#&gt; Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:stats&#39;:
+#&gt; 
+#&gt;     filter, lag</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:base&#39;:
+#&gt; 
+#&gt;     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)
+library(ggplot2)
+library(cmdstanr)</code></pre>
+<pre><code>#&gt; CmdStan path set to: /usr/share/cmdstan/cmdstan-2.36.0</code></pre>
+<pre><code>#&gt; This is cmdstanr version 0.9.0</code></pre>
+<pre><code>#&gt; - CmdStanR documentation and vignettes: mc-stan.org/cmdstanr</code></pre>
+<pre><code>#&gt; - CmdStan path: /usr/share/cmdstan/cmdstan-2.36.0</code></pre>
+<pre><code>#&gt; - CmdStan version: 2.36.0</code></pre>
+<pre class="r"><code>path_proj &lt;- here::here()
+path_src &lt;- file.path(path_proj, &quot;src&quot;)
+path_models &lt;- file.path(path_src, &quot;models&quot;)
+path_data &lt;- file.path(path_proj, &quot;data&quot;)
+path_processed &lt;- file.path(path_data, &quot;processed&quot;)
+path_modelled &lt;- file.path(path_data, &quot;modelled&quot;)
+path_samples_sari &lt;- file.path(path_data, &quot;draws&quot;, &quot;sari&quot;)
+
+source(file.path(path_src, &quot;20-processing.R&quot;))
+source(file.path(path_src, &quot;30-eda.R&quot;))
+source(file.path(path_src, &quot;fit_function.R&quot;))
+source(file.path(path_src, &quot;50-modelling.R&quot;))
+
+sari &lt;- readRDS(file.path(path_processed, &quot;sari_41002_20090614_20091122.rds&quot;))
+range(sari$date)</code></pre>
+<pre><code>#&gt; [1] &quot;2009-06-14&quot; &quot;2009-11-22&quot;</code></pre>
+</div>
+<div id="load-and-compile-models" class="section level2">
+<h2>Load and compile models</h2>
+<pre class="r"><code>model_names &lt;- c(&quot;nonparam&quot;, &quot;exp&quot;, &quot;exp_rw1&quot;, &quot;exp_ou&quot;)
+models &lt;- file.path(path_models, paste0(model_names, &quot;.stan&quot;)) |&gt;
+    lapply(cmdstan_model) |&gt;
+    setNames(model_names)</code></pre>
+</div>
+<div id="fit-models" class="section level2">
+<h2>Fit models</h2>
+<p>Evaluate the priors for the cumulative reporting probability curves.</p>
+<pre class="r"><code>hypers &lt;- hypers_q(phi_ref = 0.2, D_ref = 26, type = &quot;exponential&quot;, alpha_phi = 1.4, sd_log_b = 0.5, delay_seq = 0:26)</code></pre>
+<p><img src="/parametric-nowcasting/60-model/22-sari-fit-model_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>hypers</code></pre>
+<pre><code>#&gt; $alpha_phi
+#&gt; [1] 1.4
+#&gt; 
+#&gt; $beta_phi
+#&gt; [1] 4.6
+#&gt; 
+#&gt; $mean_log_b
+#&gt; [1] -2.238315
+#&gt; 
+#&gt; $sd_log_b
+#&gt; [1] 0.5
+#&gt; 
+#&gt; $mean_logit_phi
+#&gt; [1] -1.474825
+#&gt; 
+#&gt; $sd_logit_phi
+#&gt; [1] 1.126088</code></pre>
+<p>Obtain mcmc samples for selected models assuming different ending times.</p>
+<pre class="r"><code>D &lt;- 26
+end_dates &lt;- seq(as.Date(&quot;2009-08-02&quot;), as.Date(&quot;2009-11-22&quot;), by = &quot;4 week&quot;)
+samples_list &lt;- nowcast_sample_dates(sari, models, hypers, end_dates, D,
+    iter_sampling = 1000, iter_warmup = 500, chains = 1, refresh = 200, thin = 1,
+    output_dir = path_samples_sari)</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.3 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.1 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: normal_lpdf: Scale parameter is 0, but must be positive! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 45, column 4 to column 59)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.9 seconds.</code></pre>
+<pre><code>#&gt; Warning: 31 of 1000 (3.0%) transitions ended with a divergence.
+#&gt; See https://mc-stan.org/misc/warnings for details.</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.9 seconds.</code></pre>
+<pre><code>#&gt; Warning: 39 of 1000 (4.0%) transitions ended with a divergence.
+#&gt; See https://mc-stan.org/misc/warnings for details.</code></pre>
+<pre><code>#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.8 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25416beddd.stan&#39;, line 35, column 6 to column 46)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.9 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.3 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.4 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.1 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.9 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.4 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.5 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.2 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: normal_lpdf: Location parameter is inf, but must be finite! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 50, column 4 to line 51, column 23)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.4 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.7 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup) 
+#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25416beddd.stan&#39;, line 35, column 6 to column 46)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25416beddd.stan&#39;, line 35, column 6 to column 46)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 0.3 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-25210c1d5c.stan&#39;, line 51, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.7 seconds.
+#&gt; Running MCMC with 1 chain...
+#&gt; 
+#&gt; Chain 1 Iteration:    1 / 1500 [  0%]  (Warmup)</code></pre>
+<pre><code>#&gt; Chain 1 Informational Message: The current Metropolis proposal is about to be rejected because of the following issue:</code></pre>
+<pre><code>#&gt; Chain 1 Exception: poisson_lpmf: Rate parameter is -nan, but must be nonnegative! (in &#39;/tmp/RtmpHQ1XaZ/model-2545d3120c.stan&#39;, line 57, column 6 to column 49)</code></pre>
+<pre><code>#&gt; Chain 1 If this warning occurs sporadically, such as for highly constrained variable types like covariance matrices, then the sampler is fine,</code></pre>
+<pre><code>#&gt; Chain 1 but if this warning occurs often then your model may be either severely ill-conditioned or misspecified.</code></pre>
+<pre><code>#&gt; Chain 1</code></pre>
+<pre><code>#&gt; Chain 1 Iteration:  200 / 1500 [ 13%]  (Warmup) 
+#&gt; Chain 1 Iteration:  400 / 1500 [ 26%]  (Warmup) 
+#&gt; Chain 1 Iteration:  501 / 1500 [ 33%]  (Sampling) 
+#&gt; Chain 1 Iteration:  700 / 1500 [ 46%]  (Sampling) 
+#&gt; Chain 1 Iteration:  900 / 1500 [ 60%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1100 / 1500 [ 73%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1300 / 1500 [ 86%]  (Sampling) 
+#&gt; Chain 1 Iteration: 1500 / 1500 [100%]  (Sampling) 
+#&gt; Chain 1 finished in 1.9 seconds.</code></pre>
+<pre class="r"><code>samples_list</code></pre>
+<pre><code>#&gt; $`2009-08-02`
+#&gt; $`2009-08-02`$nonparam
+#&gt;   variable     mean   median      sd     mad      q5      q95 rhat ess_bulk ess_tail
+#&gt;  lp__       3594.21  3594.55    4.42    4.45 3586.64  3600.87 1.00      336      593
+#&gt;  lambda[1]    12.12    11.38    3.97    3.40    7.13    19.68 1.00      215      559
+#&gt;  lambda[2]    29.11    27.65    8.72    7.82   17.50    45.79 1.00      172      566
+#&gt;  lambda[3]    85.06    80.73   23.65   22.98   53.04   128.51 1.00      138      387
+#&gt;  lambda[4]    92.20    87.46   26.94   26.64   56.54   141.38 1.00      146      487
+#&gt;  lambda[5]    76.14    71.91   23.81   22.87   44.71   121.62 1.00      148      398
+#&gt;  lambda[6]   283.31   273.04   84.88   84.94  173.49   443.36 1.00      142      344
+#&gt;  lambda[7]  2312.22  2198.02  683.00  680.08 1367.79  3555.94 1.00      132      323
+#&gt;  lambda[8] 14233.56 13437.90 4652.75 4412.88 8227.67 22452.15 1.00      147      321
+#&gt;  p[1]          0.02     0.02    0.01    0.01    0.01     0.03 1.00      145      349
+#&gt; 
+#&gt;  # showing 10 of 71 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-08-02`$exp
+#&gt;   variable    mean  median      sd     mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      3687.70 3688.00    2.24    2.19 3683.60 3690.71 1.00      377      416
+#&gt;  lambda[1]    4.63    4.56    1.12    1.09    2.96    6.61 1.00      365      605
+#&gt;  lambda[2]   10.91   10.65    2.16    2.00    7.94   14.85 1.00      205      331
+#&gt;  lambda[3]   31.67   30.72    5.52    4.88   24.44   41.38 1.00      193      281
+#&gt;  lambda[4]   34.09   33.21    6.63    5.61   25.00   46.61 1.01      173      214
+#&gt;  lambda[5]   29.36   28.25    6.93    6.14   19.99   42.46 1.00      216      214
+#&gt;  lambda[6]  115.12  111.65   24.79   21.74   81.89  159.89 1.01      148      240
+#&gt;  lambda[7]  895.16  863.90  203.28  178.24  629.33 1264.62 1.01      122      222
+#&gt;  lambda[8] 5381.15 5192.84 1340.94 1221.74 3483.06 7895.81 1.01      142      260
+#&gt;  b            0.41    0.40    0.11    0.10    0.25    0.61 1.01      124      206
+#&gt; 
+#&gt;  # showing 10 of 46 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-08-02`$exp_rw1
+#&gt;   variable    mean  median      sd     mad      q5      q95 rhat ess_bulk ess_tail
+#&gt;  lp__      3717.55 3717.43    7.30    7.15 3705.61  3730.48 1.04       31       28
+#&gt;  lambda[1]    5.93    5.44    2.06    1.50    3.53     9.80 1.02      425      531
+#&gt;  lambda[2]   14.01   12.84    4.71    3.22    8.74    22.51 1.00      321      576
+#&gt;  lambda[3]   41.95   39.17   13.27   11.48   27.09    67.99 1.01       90      217
+#&gt;  lambda[4]   35.04   27.57   29.55    7.21   19.12    79.29 1.01      145       66
+#&gt;  lambda[5]   41.85   38.24   15.84   13.74   23.92    71.59 1.01      183      544
+#&gt;  lambda[6]  193.41  175.44   78.98   59.54  101.94   346.43 1.00      119      181
+#&gt;  lambda[7] 1474.40 1338.60  710.67  585.55  569.68  2729.92 1.01      103      100
+#&gt;  lambda[8] 3664.21 1746.09 4718.61 1916.18  319.24 11024.75 1.01       69      329
+#&gt;  log_b[1]    -1.58   -1.57    0.52    0.46   -2.36    -0.90 1.01      152      245
+#&gt; 
+#&gt;  # showing 10 of 267 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-08-02`$exp_ou
+#&gt;   variable    mean  median      sd    mad      q5     q95 rhat ess_bulk ess_tail
+#&gt;  lp__      3716.02 3716.24    7.57   7.51 3702.75 3727.27 1.02       74      201
+#&gt;  lambda[1]    5.99    5.63    2.06   1.88    3.47    9.87 1.00      205      202
+#&gt;  lambda[2]   14.72   13.52    6.45   3.61    8.61   24.55 1.00      306      242
+#&gt;  lambda[3]   43.16   40.03   13.88  11.39   27.11   70.58 1.01      230      453
+#&gt;  lambda[4]   33.40   26.12   35.20   7.89   17.03   56.31 1.02      146       50
+#&gt;  lambda[5]   42.96   39.83   20.41  12.81   23.36   73.57 1.01      215      437
+#&gt;  lambda[6]  239.31  205.31  153.68  71.74  117.94  446.82 1.01      129      114
+#&gt;  lambda[7] 1496.76 1398.57  660.32 558.37  608.47 2765.77 1.02       87       72
+#&gt;  lambda[8] 1678.11  938.07 1977.31 816.04  307.21 5333.36 1.00      266      278
+#&gt;  log_b[1]    -1.52   -1.54    0.51   0.41   -2.24   -0.78 1.02      177      168
+#&gt; 
+#&gt;  # showing 10 of 271 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; 
+#&gt; $`2009-08-30`
+#&gt; $`2009-08-30`$nonparam
+#&gt;   variable     mean   median     sd    mad       q5      q95 rhat ess_bulk ess_tail
+#&gt;  lp__      59983.86 59984.15   4.51   4.37 59975.70 59990.60 1.00      374      495
+#&gt;  lambda[1]    12.59    12.14   2.87   2.60     8.72    17.61 1.01      168      281
+#&gt;  lambda[2]    29.53    28.71   5.94   5.54    21.08    40.40 1.00      138      169
+#&gt;  lambda[3]    82.96    80.71  15.87  14.48    61.11   112.13 1.01      116      116
+#&gt;  lambda[4]    68.87    66.27  13.91  12.21    50.54    94.81 1.01      113      101
+#&gt;  lambda[5]   112.62   108.83  22.35  20.16    83.14   155.32 1.00      117      118
+#&gt;  lambda[6]   492.93   478.97  94.67  89.39   366.59   671.83 1.01      106      103
+#&gt;  lambda[7]  1869.70  1806.74 359.82 328.92  1381.31  2583.25 1.01      106       96
+#&gt;  lambda[8]  3596.34  3476.86 690.96 648.29  2663.09  4957.75 1.01      104       89
+#&gt;  lambda[9]  3462.68  3366.73 666.82 608.86  2582.43  4765.87 1.01      104       88
+#&gt; 
+#&gt;  # showing 10 of 79 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-08-30`$exp
+#&gt;   variable     mean   median     sd    mad       q5      q95 rhat ess_bulk ess_tail
+#&gt;  lp__      60070.31 60070.70   2.82   2.67 60065.10 60074.00 1.00      300      471
+#&gt;  lambda[1]     6.18     6.17   0.86   0.83     4.80     7.68 1.00      525      426
+#&gt;  lambda[2]    14.27    14.23   1.50   1.49    11.90    16.82 1.00      583      534
+#&gt;  lambda[3]    39.21    39.00   2.93   2.97    34.44    44.15 1.00      451      222
+#&gt;  lambda[4]    31.74    31.63   2.82   2.73    27.59    36.63 1.00      397      264
+#&gt;  lambda[5]    51.14    50.93   4.12   4.16    44.95    58.46 1.00      307      622
+#&gt;  lambda[6]   216.55   215.19  13.97  13.90   195.73   240.96 1.00      240      224
+#&gt;  lambda[7]   797.37   794.45  50.20  49.51   721.58   883.36 1.00      204      178
+#&gt;  lambda[8]  1540.61  1534.38 100.62 102.06  1389.98  1716.73 1.00      194      162
+#&gt;  lambda[9]  1501.98  1497.84 106.58 109.38  1338.23  1688.92 1.00      216      166
+#&gt; 
+#&gt;  # showing 10 of 54 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-08-30`$exp_rw1
+#&gt;   variable     mean   median     sd    mad       q5      q95 rhat ess_bulk ess_tail
+#&gt;  lp__      60195.55 60195.80   4.63   4.60 60187.40 60202.71 1.00      349      685
+#&gt;  lambda[1]    12.26     9.73   8.13   4.07     5.78    27.22 1.00      348      335
+#&gt;  lambda[2]    31.11    25.91  19.75  10.21    15.32    66.56 1.00      281      463
+#&gt;  lambda[3]    80.41    65.87  47.55  23.81    42.73   163.30 1.00      320      491
+#&gt;  lambda[4]    72.86    54.30  54.83  26.60    29.30   177.00 1.00      193      551
+#&gt;  lambda[5]   138.83   119.32  66.27  41.17    73.31   261.66 1.00      537      741
+#&gt;  lambda[6]   414.23   392.00 102.00  90.82   285.56   597.73 1.00      832      676
+#&gt;  lambda[7]   578.61   577.80  22.02  21.84   544.69   615.43 1.00      985      602
+#&gt;  lambda[8]  1316.44  1281.84 161.39 127.52  1129.51  1619.06 1.00      677      495
+#&gt;  lambda[9]  1081.24  1060.99 118.43 104.75   928.72  1284.93 1.00      673      466
+#&gt; 
+#&gt;  # showing 10 of 399 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-08-30`$exp_ou
+#&gt;   variable     mean   median     sd    mad       q5      q95 rhat ess_bulk ess_tail
+#&gt;  lp__      60192.37 60192.50   5.01   4.60 60183.40 60200.10 1.01      296      379
+#&gt;  lambda[1]    10.23     8.70   5.66   3.12     5.33    20.88 1.00      635      420
+#&gt;  lambda[2]    27.85    23.24  16.64   8.66    14.18    56.15 1.00      395      418
+#&gt;  lambda[3]    65.16    56.95  29.86  17.41    39.27   120.79 1.00      672      475
+#&gt;  lambda[4]    61.90    44.02  61.05  21.14    24.44   154.65 1.00      372      419
+#&gt;  lambda[5]   136.10   115.77  75.36  44.93    69.62   271.32 1.00      542      519
+#&gt;  lambda[6]   443.73   410.81 133.22  94.82   301.46   681.65 1.00      627      505
+#&gt;  lambda[7]   575.17   573.93  21.56  21.41   541.66   611.97 1.00      821      610
+#&gt;  lambda[8]  1358.34  1328.68 180.98 159.42  1130.55  1697.92 1.00      435      349
+#&gt;  lambda[9]  1112.06  1093.76 124.15 104.15   954.23  1338.75 1.00      590      479
+#&gt; 
+#&gt;  # showing 10 of 403 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; 
+#&gt; $`2009-09-27`
+#&gt; $`2009-09-27`$nonparam
+#&gt;   variable      mean    median     sd    mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      169957.14 169957.00   5.02   4.45 169949.00 169965.00 1.00      289      458
+#&gt;  lambda[1]     10.93     10.71   1.85   1.82      8.34     14.01 1.00      104      232
+#&gt;  lambda[2]     24.38     23.94   3.99   3.77     18.87     30.73 1.00       89      180
+#&gt;  lambda[3]     66.47     65.44  10.15   9.58     52.96     83.17 1.00       74      159
+#&gt;  lambda[4]     49.99     48.91   7.78   7.11     39.26     62.45 1.01       74      214
+#&gt;  lambda[5]     93.00     91.37  14.22  13.19     73.40    116.83 1.01       75      158
+#&gt;  lambda[6]    370.48    362.91  55.75  49.42    295.02    461.27 1.01       67      139
+#&gt;  lambda[7]   1199.22   1176.35 181.56 159.44    955.39   1487.92 1.01       68      150
+#&gt;  lambda[8]   2290.12   2246.97 343.89 303.86   1819.19   2844.64 1.01       66      141
+#&gt;  lambda[9]   2239.01   2197.68 333.90 292.75   1780.57   2783.65 1.01       66      136
+#&gt; 
+#&gt;  # showing 10 of 87 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-09-27`$exp
+#&gt;   variable      mean    median    sd   mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      170041.33 170042.00  3.23  2.97 170035.00 170046.00 1.00      356      561
+#&gt;  lambda[1]      6.17      6.14  0.65  0.65      5.16      7.33 1.00      957      801
+#&gt;  lambda[2]     13.53     13.53  1.05  1.04     11.88     15.34 1.00      824      710
+#&gt;  lambda[3]     36.14     36.19  1.80  1.75     33.16     39.17 1.00     1076      679
+#&gt;  lambda[4]     26.76     26.73  1.60  1.55     24.13     29.34 1.00      826      526
+#&gt;  lambda[5]     49.08     48.98  2.35  2.24     45.34     53.00 1.00      815      585
+#&gt;  lambda[6]    192.05    192.16  5.00  5.03    183.64    200.07 1.00      614      703
+#&gt;  lambda[7]    613.64    613.50 11.28 11.22    595.42    633.00 1.01      483      604
+#&gt;  lambda[8]   1165.68   1164.98 19.49 19.40   1134.22   1199.38 1.00      399      508
+#&gt;  lambda[9]   1138.90   1139.49 20.92 21.51   1104.11   1173.00 1.00      360      575
+#&gt; 
+#&gt;  # showing 10 of 62 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-09-27`$exp_rw1
+#&gt;   variable      mean    median    sd   mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      170257.29 170257.00  5.23  5.93 170248.00 170265.00 1.00      382      545
+#&gt;  lambda[1]      9.77      9.15  2.78  1.98      6.63     15.20 1.00      834      582
+#&gt;  lambda[2]     20.65     19.72  4.50  3.60     15.39     28.65 1.00      756      460
+#&gt;  lambda[3]     50.75     49.11  7.81  6.41     40.95     65.28 1.00      899      648
+#&gt;  lambda[4]     34.02     32.60  6.51  4.97     26.61     46.73 1.00      809      699
+#&gt;  lambda[5]     76.73     75.05 11.83 10.34     61.85     98.67 1.00      794      608
+#&gt;  lambda[6]    244.29    242.57 14.71 14.44    222.49    271.09 1.00     1704      631
+#&gt;  lambda[7]    578.16    577.89 10.45  9.74    560.96    595.68 1.00     2083      532
+#&gt;  lambda[8]   1139.94   1138.03 26.82 25.55   1097.43   1185.10 1.01     1560      709
+#&gt;  lambda[9]   1120.81   1119.74 29.34 28.67   1075.84   1168.98 1.00     1406      872
+#&gt; 
+#&gt;  # showing 10 of 531 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-09-27`$exp_ou
+#&gt;   variable      mean    median    sd   mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      170253.49 170254.00  5.44  5.93 170244.00 170261.00 1.00      406      631
+#&gt;  lambda[1]      8.83      8.48  2.11  1.80      6.15     12.45 1.00      655      679
+#&gt;  lambda[2]     19.82     18.94  4.30  3.31     14.89     27.81 1.00      782      547
+#&gt;  lambda[3]     49.43     48.01  7.55  6.40     39.97     63.35 1.00      704      525
+#&gt;  lambda[4]     33.24     31.59  8.08  4.83     25.48     47.20 1.01      572      388
+#&gt;  lambda[5]     77.64     75.01 12.75 10.32     62.41    101.22 1.01      610      420
+#&gt;  lambda[6]    246.63    245.16 15.05 14.23    224.12    273.43 1.01      637      733
+#&gt;  lambda[7]    576.36    575.78 10.97 11.33    559.55    594.75 1.00     1157      703
+#&gt;  lambda[8]   1141.69   1140.64 25.48 26.52   1101.47   1184.34 1.00      880      724
+#&gt;  lambda[9]   1121.85   1119.99 28.20 27.32   1075.46   1169.85 1.00      979      716
+#&gt; 
+#&gt;  # showing 10 of 535 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; 
+#&gt; $`2009-10-25`
+#&gt; $`2009-10-25`$nonparam
+#&gt;   variable      mean    median     sd    mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      309652.15 309652.00   5.31   5.93 309643.00 309660.00 1.00      299      513
+#&gt;  lambda[1]      9.62      9.53   1.34   1.25      7.71     12.05 1.04       49      148
+#&gt;  lambda[2]     21.10     20.68   2.53   2.22     17.67     25.80 1.06       39       79
+#&gt;  lambda[3]     56.11     55.21   6.50   5.47     47.58     68.73 1.08       31       82
+#&gt;  lambda[4]     40.69     40.08   4.67   3.78     34.25     49.78 1.06       40       78
+#&gt;  lambda[5]     79.73     78.51   8.88   7.45     67.47     96.56 1.07       33       76
+#&gt;  lambda[6]    305.45    300.25  33.04  25.79    260.77    370.17 1.08       29       76
+#&gt;  lambda[7]    939.30    922.23 102.15  77.62    799.30   1140.65 1.09       27       65
+#&gt;  lambda[8]   1800.26   1769.14 194.52 148.56   1534.23   2197.51 1.09       27       67
+#&gt;  lambda[9]   1783.76   1751.09 194.06 147.00   1517.98   2180.58 1.09       27       66
+#&gt; 
+#&gt;  # showing 10 of 95 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-10-25`$exp
+#&gt;   variable      mean    median    sd   mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      309740.66 309741.00  3.30  2.97 309735.00 309746.00 1.00      456      640
+#&gt;  lambda[1]      6.64      6.63  0.57  0.58      5.72      7.61 1.00     1158      754
+#&gt;  lambda[2]     14.26     14.28  0.89  0.86     12.77     15.82 1.00     1265      721
+#&gt;  lambda[3]     37.48     37.41  1.53  1.57     34.95     40.05 1.01     1517      549
+#&gt;  lambda[4]     26.90     26.91  1.38  1.37     24.67     29.30 1.01     1068      716
+#&gt;  lambda[5]     52.47     52.40  2.04  2.18     49.31     55.88 1.00     1793      732
+#&gt;  lambda[6]    198.55    198.59  3.97  3.91    192.25    205.33 1.00     1162      726
+#&gt;  lambda[7]    606.86    606.57  7.82  7.78    594.68    619.85 1.00     1530      878
+#&gt;  lambda[8]   1159.46   1159.42 12.28 11.56   1138.94   1180.09 1.00      988      592
+#&gt;  lambda[9]   1144.49   1144.26 12.61 12.69   1124.30   1164.81 1.00      788      743
+#&gt; 
+#&gt;  # showing 10 of 70 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-10-25`$exp_rw1
+#&gt;   variable      mean    median    sd   mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      309973.29 309974.00  6.06  5.93 309962.00 309983.00 1.02      351      300
+#&gt;  lambda[1]      8.98      8.69  1.73  1.42      6.85     12.13 1.00     1085      638
+#&gt;  lambda[2]     18.59     18.22  2.33  2.25     15.39     23.09 1.00     1224      657
+#&gt;  lambda[3]     45.40     44.94  3.75  3.45     40.12     51.89 1.00     1258      611
+#&gt;  lambda[4]     30.16     29.78  2.88  2.59     26.29     35.42 1.01      941      549
+#&gt;  lambda[5]     67.39     66.77  5.55  5.51     59.46     77.14 1.01      848      766
+#&gt;  lambda[6]    224.85    224.90  7.21  7.33    213.39    237.41 1.01     1181      753
+#&gt;  lambda[7]    582.28    582.12  7.97  7.55    569.67    596.68 1.00     1368      577
+#&gt;  lambda[8]   1139.65   1139.63 15.91 15.05   1114.80   1167.14 1.00     2185      748
+#&gt;  lambda[9]   1136.18   1136.38 17.18 17.62   1109.06   1164.60 1.01     1707      784
+#&gt; 
+#&gt;  # showing 10 of 663 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-10-25`$exp_ou
+#&gt;   variable      mean    median    sd   mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      309972.36 309973.00  6.13  5.93 309961.00 309982.00 1.00      360      630
+#&gt;  lambda[1]      8.27      8.11  1.21  1.11      6.71     10.51 1.00     1039      590
+#&gt;  lambda[2]     17.90     17.65  2.12  1.95     15.05     21.60 1.00      837      511
+#&gt;  lambda[3]     44.44     44.24  3.01  2.95     40.03     49.84 1.00     1045      376
+#&gt;  lambda[4]     29.17     28.92  2.53  2.39     25.44     33.32 1.00     1456      739
+#&gt;  lambda[5]     67.82     67.38  5.52  5.75     59.54     77.31 1.00     1071      717
+#&gt;  lambda[6]    225.75    225.45  7.27  7.10    213.96    238.21 1.00     1204      815
+#&gt;  lambda[7]    581.71    581.59  8.65  8.75    567.53    595.75 1.00     1698      744
+#&gt;  lambda[8]   1140.68   1140.58 15.48 15.55   1115.71   1165.60 1.00     1682      560
+#&gt;  lambda[9]   1135.98   1135.45 16.46 16.75   1109.96   1163.88 1.00     2155      662
+#&gt; 
+#&gt;  # showing 10 of 667 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; 
+#&gt; $`2009-11-22`
+#&gt; $`2009-11-22`$nonparam
+#&gt;   variable      mean    median     sd    mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      470185.75 470186.00   5.30   5.93 470177.00 470194.00 1.00      341      480
+#&gt;  lambda[1]      8.92      8.84   0.93   0.94      7.46     10.47 1.00      153      510
+#&gt;  lambda[2]     19.70     19.52   1.69   1.70     17.20     22.63 1.00       84      185
+#&gt;  lambda[3]     51.57     51.15   4.00   3.81     45.77     58.62 1.00       76      165
+#&gt;  lambda[4]     35.98     35.70   2.97   2.92     31.59     41.37 1.00       81      162
+#&gt;  lambda[5]     74.30     73.77   5.83   5.80     65.46     84.65 1.01       69      146
+#&gt;  lambda[6]    274.62    272.20  20.67  20.15    244.56    312.91 1.00       63      134
+#&gt;  lambda[7]    827.40    819.83  61.59  59.42    736.99    940.32 1.00       63      103
+#&gt;  lambda[8]   1606.01   1589.44 118.59 114.92   1428.80   1823.76 1.00       61      117
+#&gt;  lambda[9]   1583.11   1568.07 116.64 112.36   1409.94   1800.66 1.00       62      116
+#&gt; 
+#&gt;  # showing 10 of 103 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-11-22`$exp
+#&gt;   variable      mean    median    sd   mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      470270.42 470271.00  3.47  2.97 470264.00 470276.00 1.00      438      734
+#&gt;  lambda[1]      6.93      6.92  0.58  0.55      5.96      7.89 1.00     1031      772
+#&gt;  lambda[2]     15.17     15.14  0.82  0.80     13.82     16.54 1.00     1082      912
+#&gt;  lambda[3]     39.38     39.32  1.41  1.41     37.15     41.70 1.00     1119      791
+#&gt;  lambda[4]     27.36     27.37  1.28  1.28     25.23     29.41 1.00     1424      739
+#&gt;  lambda[5]     55.84     55.83  1.86  1.94     52.77     58.80 1.00      765      731
+#&gt;  lambda[6]    205.63    205.75  3.99  3.88    199.07    212.22 1.00     1324      616
+#&gt;  lambda[7]    616.75    616.67  6.66  6.77    605.56    628.27 1.00     1031      617
+#&gt;  lambda[8]   1194.43   1194.45  9.43  9.70   1179.13   1210.30 1.00     1033      893
+#&gt;  lambda[9]   1174.36   1174.74 10.72 10.24   1156.68   1191.46 1.00     1085      952
+#&gt; 
+#&gt;  # showing 10 of 78 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-11-22`$exp_rw1
+#&gt;   variable      mean    median    sd   mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      470544.32 470545.00  6.54  5.93 470533.00 470554.00 1.00      307      532
+#&gt;  lambda[1]      8.59      8.46  1.17  1.12      7.00     10.61 1.00     1041      716
+#&gt;  lambda[2]     18.35     18.19  1.65  1.60     15.94     21.17 1.00     1106      864
+#&gt;  lambda[3]     45.02     44.76  2.73  2.66     40.92     49.90 1.00      990      473
+#&gt;  lambda[4]     28.93     28.86  1.83  1.76     26.14     32.08 1.01     1013      331
+#&gt;  lambda[5]     66.24     66.09  3.60  3.45     60.79     72.71 1.00     1638      786
+#&gt;  lambda[6]    220.95    220.59  4.99  4.84    213.14    229.66 1.00     1201      786
+#&gt;  lambda[7]    589.00    589.20  7.13  6.97    577.11    600.67 1.00     1882      700
+#&gt;  lambda[8]   1169.63   1169.99 12.01 12.46   1150.40   1189.13 1.00     1425      844
+#&gt;  lambda[9]   1151.39   1151.19 11.95 12.42   1131.64   1170.66 1.01     1745      743
+#&gt; 
+#&gt;  # showing 10 of 795 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)
+#&gt; 
+#&gt; $`2009-11-22`$exp_ou
+#&gt;   variable      mean    median    sd   mad        q5       q95 rhat ess_bulk ess_tail
+#&gt;  lp__      470545.77 470546.00  6.65  5.93 470534.00 470556.00 1.00      403      667
+#&gt;  lambda[1]      8.16      8.04  1.00  0.91      6.74      9.92 1.00      811      850
+#&gt;  lambda[2]     18.16     18.02  1.71  1.62     15.57     21.07 1.00     1002      814
+#&gt;  lambda[3]     44.58     44.40  2.58  2.47     40.64     49.13 1.01     1133      739
+#&gt;  lambda[4]     28.62     28.47  2.07  1.93     25.52     32.34 1.00     1241      684
+#&gt;  lambda[5]     66.64     66.33  3.79  3.48     61.02     73.76 1.00      880      622
+#&gt;  lambda[6]    221.40    221.30  5.53  5.41    212.27    230.08 1.00     1349      820
+#&gt;  lambda[7]    588.40    588.26  6.80  6.48    577.72    599.88 1.00     2065      948
+#&gt;  lambda[8]   1171.70   1171.31 12.72 12.79   1152.10   1192.60 1.00     1590      693
+#&gt;  lambda[9]   1150.41   1149.78 12.20 11.97   1130.85   1170.90 1.00     1223      670
+#&gt; 
+#&gt;  # showing 10 of 799 rows (change via &#39;max_rows&#39; argument or &#39;cmdstanr_max_rows&#39; option)</code></pre>
+</div>
+<div id="save-mcmc-samples" class="section level2">
+<h2>Save mcmc samples</h2>
+<pre class="r"><code>saveRDS(samples_list, file.path(path_modelled, &quot;sari_41002_20090614_20091122_mcmc.rds&quot;))</code></pre>
+</div>
+<div id="time-to-execute-the-task" class="section level2">
+<h2>Time to execute the task</h2>
+<p>Only useful when executed with <code>Rscript</code>.</p>
+<pre class="r"><code>proc.time()</code></pre>
+<pre><code>#&gt;    user  system elapsed 
+#&gt;  23.720   0.959  26.309</code></pre>
+</div>

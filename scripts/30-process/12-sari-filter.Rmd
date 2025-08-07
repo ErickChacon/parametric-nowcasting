@@ -3,7 +3,7 @@ title: "Prepare SARI data"
 prerequisites:
     - data/cleaned/clean_data_srag_epiweek_delay_table_PR.csv
 targets:
-    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+    - data/processed/sari_41002_20090614_20091122.rds
 ---
 
 ```{r setup, include = FALSE}
@@ -59,7 +59,7 @@ sari_41002
 ## Save processed data
 
 ```{r}
-saveRDS(sari_41002, file.path(path_processed, "sari_cum_2009_06_14_to_11_22.rds"))
+saveRDS(sari_41002, file.path(path_processed, "sari_41002_20090614_20091122.rds"))
 ```
 
 ## Time to execute the task

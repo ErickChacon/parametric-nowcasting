@@ -3,7 +3,7 @@ title: "Prepare SARI data"
 prerequisites:
     - data/cleaned/clean_data_srag_epiweek_delay_table_PR.csv
 targets:
-    - data/processed/sari_cum_2009_06_14_to_11_22.rds
+    - data/processed/sari_41002_20090614_20091122.rds
 ---
 
 
@@ -32,7 +32,7 @@ sari &lt;- path_cleaned |&gt;
     file.path(&quot;clean_data_srag_epiweek_delay_table_PR.csv&quot;) |&gt;
     readr::read_csv()</code></pre>
 <pre><code>#&gt; Rows: 10373 Columns: 32</code></pre>
-<pre><code>#&gt; ── Column specification ──────────────────────────────────────────────────────────────────────
+<pre><code>#&gt; ── Column specification ────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 #&gt; Delimiter: &quot;,&quot;
 #&gt; dbl (32): epiweek, epiyear, regionalsaude, Notifications, d0, d1, d2, d3, d4, d5, d6, d7, d8, d9...
 #&gt; 
@@ -79,12 +79,12 @@ sari_41002</code></pre>
 </div>
 <div id="save-processed-data" class="section level2">
 <h2>Save processed data</h2>
-<pre class="r"><code>saveRDS(sari_41002, file.path(path_processed, &quot;sari_cum_2009_06_14_to_11_22.rds&quot;))</code></pre>
+<pre class="r"><code>saveRDS(sari_41002, file.path(path_processed, &quot;sari_41002_20090614_20091122.rds&quot;))</code></pre>
 </div>
 <div id="time-to-execute-the-task" class="section level2">
 <h2>Time to execute the task</h2>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   0.699   0.337   0.678</code></pre>
+#&gt;   0.714   0.335   0.778</code></pre>
 </div>
