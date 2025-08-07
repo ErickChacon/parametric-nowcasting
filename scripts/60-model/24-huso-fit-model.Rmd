@@ -61,7 +61,7 @@ Obtain mcmc samples for selected models assuming different ending times.
 D <- 15
 end_dates <- seq(as.Date("2011-05-25"), as.Date("2011-06-06"), by = "3 days")
 samples_list <- nowcast_sample_dates(huso, models, hypers, end_dates, D,
-    iter_sampling = 1000, iter_warmup = 500, chains = 1,
+    iter_sampling = 10000, iter_warmup = 5000, chains = 3,
     output_dir = path_samples_huso)
 samples_list
 ```
