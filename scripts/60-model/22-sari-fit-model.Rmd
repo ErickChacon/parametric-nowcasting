@@ -61,7 +61,7 @@ Obtain mcmc samples for selected models assuming different ending times.
 D <- 26
 end_dates <- seq(as.Date("2009-08-02"), as.Date("2009-11-22"), by = "4 week")
 samples_list <- nowcast_sample_dates(sari, models, hypers, end_dates, D,
-    iter_sampling = 1000, iter_warmup = 500, chains = 1, refresh = 200, thin = 1,
+    iter_sampling = 10000, iter_warmup = 5000, chains = 3,
     output_dir = path_samples_sari)
 samples_list
 ```

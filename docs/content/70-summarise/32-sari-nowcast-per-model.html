@@ -66,18 +66,18 @@ sari_summary</code></pre>
 <pre class="r"><code>sari_nowcast &lt;- nowcast_periods(sari_mcmc, date_by = &quot;1 week&quot;)
 sari_nowcast</code></pre>
 <pre><code>#&gt; # A tibble: 320 × 6
-#&gt;    date_end   model    date           mean lower   upper
-#&gt;    &lt;date&gt;     &lt;fct&gt;    &lt;date&gt;        &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;
-#&gt;  1 2009-08-02 nonparam 2009-06-14    11.7     4     24  
-#&gt;  2 2009-08-02 nonparam 2009-06-21    27.8    13     49.0
-#&gt;  3 2009-08-02 nonparam 2009-06-28    83.6    44    136  
-#&gt;  4 2009-08-02 nonparam 2009-07-05    88.8    48    152. 
-#&gt;  5 2009-08-02 nonparam 2009-07-12    73.9    37    126  
-#&gt;  6 2009-08-02 nonparam 2009-07-19   277.    148    463. 
-#&gt;  7 2009-08-02 nonparam 2009-07-26  2248.   1188.  3888. 
-#&gt;  8 2009-08-02 nonparam 2009-08-02 13886.   7178. 25305. 
-#&gt;  9 2009-08-02 exp      2009-06-14     4.68    1     10  
-#&gt; 10 2009-08-02 exp      2009-06-21    11.1     4     20  
+#&gt;    date_end   model    date           mean lower  upper
+#&gt;    &lt;date&gt;     &lt;fct&gt;    &lt;date&gt;        &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;
+#&gt;  1 2009-08-02 nonparam 2009-06-14    12.2     4     24 
+#&gt;  2 2009-08-02 nonparam 2009-06-21    29.2    13     54 
+#&gt;  3 2009-08-02 nonparam 2009-06-28    86.1    46    152 
+#&gt;  4 2009-08-02 nonparam 2009-07-05    92.4    49    165 
+#&gt;  5 2009-08-02 nonparam 2009-07-12    76.2    38    140 
+#&gt;  6 2009-08-02 nonparam 2009-07-19   286.    156    507 
+#&gt;  7 2009-08-02 nonparam 2009-07-26  2331.   1280   4154 
+#&gt;  8 2009-08-02 nonparam 2009-08-02 14328.   7396. 26428.
+#&gt;  9 2009-08-02 exp      2009-06-14     4.65    1     10 
+#&gt; 10 2009-08-02 exp      2009-06-21    10.9     4     20 
 #&gt; # ℹ 310 more rows</code></pre>
 </div>
 <div id="visualize-nowcasting-per-reference-date" class="section level2">
@@ -107,5 +107,5 @@ p &lt;- plot_nowcast(sari_nowcast, sari_summary, model_labels = model_labels)</c
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   3.090   0.400   4.758</code></pre>
+#&gt;  15.903   1.109  17.623</code></pre>
 </div>
