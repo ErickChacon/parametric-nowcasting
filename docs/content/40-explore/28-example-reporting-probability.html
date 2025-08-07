@@ -43,11 +43,12 @@ sari &lt;- readRDS(file.path(path_processed, &quot;sari_41002_20090614_20091122.
 <h2>Convert to long format and filter</h2>
 <p>Convert datasets to long format and filter the desired date: <code>2009-08-30</code> for SARI, and <code>2011-05-22</code> for HusO104.</p>
 <pre class="r"><code>sari_train &lt;- sari |&gt;
-    select(-starts_with(&quot;notifications&quot;)) |&gt;
+    select(-cases_baseline) |&gt;
     reporcases_longer() |&gt;
     filter(date == &quot;2009-08-30&quot;)
 
 huso_train &lt;- huso |&gt;
+    select(-cases_baseline) |&gt;
     reporcases_longer() |&gt;
     filter(date == &quot;2011-05-22&quot;)</code></pre>
 </div>
@@ -117,5 +118,5 @@ p &lt;- plot_compare_curves(df_train, df_fit, mylabs) +
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   1.208   0.311   1.205</code></pre>
+#&gt;   1.190   0.337   1.210</code></pre>
 </div>

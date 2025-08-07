@@ -21,12 +21,7 @@ target_all = docs/content/_index.html \
 	docs/content/50-simulate/13-test-param-exp-rw1.html \
 	docs/content/50-simulate/14-test-param-exp-ou.html \
 	docs/content/60-model/_index.html \
-	data/modelled/sari_41002_20090614_20091122_mcmc.rds \
-	docs/content/60-model/22-sari-fit-model.html \
-	data/figures/sari_reported_fitted_curves.png \
-	docs/content/70-summarise/22-sari-model-adequacy.html \
-	data/figures/sari_nowcast.png \
-	docs/content/70-summarise/32-sari-nowcast-summary.html
+	docs/content/70-summarise/_index.html
 
 target_clean = docs/content/_index.html \
 	docs/content/30-process/_index.html \
@@ -44,9 +39,7 @@ target_clean = docs/content/_index.html \
 	docs/content/50-simulate/13-test-param-exp-rw1.html \
 	docs/content/50-simulate/14-test-param-exp-ou.html \
 	docs/content/60-model/_index.html \
-	docs/content/60-model/22-sari-fit-model.html \
-	docs/content/70-summarise/22-sari-model-adequacy.html \
-	docs/content/70-summarise/32-sari-nowcast-summary.html
+	docs/content/70-summarise/_index.html
 
 all: $(target_all)
 
@@ -106,19 +99,8 @@ docs/content/50-simulate/14-test-param-exp-ou.html: \
 docs/content/60-model/_index.html: \
 	scripts/60-model/_index.Rmd
 
-data/modelled/sari_41002_20090614_20091122_mcmc.rds docs/content/60-model/22-sari-fit-model.html: \
-	scripts/60-model/22-sari-fit-model.Rmd \
-	data/processed/sari_41002_20090614_20091122.rds
-
-data/figures/sari_reported_fitted_curves.png docs/content/70-summarise/22-sari-model-adequacy.html: \
-	scripts/70-summarise/22-sari-model-adequacy.Rmd \
-	data/processed/sari_41002_20090614_20091122.rds \
-	data/modelled/sari_41002_20090614_20091122_mcmc.rds
-
-data/figures/sari_nowcast.png docs/content/70-summarise/32-sari-nowcast-summary.html: \
-	scripts/70-summarise/32-sari-nowcast-summary.Rmd \
-	data/processed/sari_41002_20090614_20091122.rds \
-	data/modelled/sari_41002_20090614_20091122_mcmc.rds
+docs/content/70-summarise/_index.html: \
+	scripts/70-summarise/_index.Rmd
 
 $(target_all):
 	@Rscript -e 'blogdown:::build_rmds("$(<D)/$(<F)", "docs", "scripts")'

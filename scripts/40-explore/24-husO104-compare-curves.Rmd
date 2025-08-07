@@ -39,10 +39,10 @@ huso <- readRDS(file.path(path_processed, "huso104_20110512_20110606.rds"))
 Convert data to long format and filter with observed data by the last available date.
 
 ```{r}
-last_date <- max(huso$date)
 huso_long <- huso |>
+    select(-cases_baseline) |>
+    mutate(available_delay = seq(n()-1, 0)) |>
     reporcases_longer() |>
-    mutate(available_delay = as.numeric(last_date - date)) |>
     filter(delay <= available_delay)
 ```
 

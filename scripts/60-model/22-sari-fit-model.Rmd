@@ -4,6 +4,7 @@ prerequisites:
     - data/processed/sari_41002_20090614_20091122.rds
 targets:
     - data/modelled/sari_41002_20090614_20091122_mcmc.rds
+makefile: false
 ---
 
 ```{r setup, include = FALSE}

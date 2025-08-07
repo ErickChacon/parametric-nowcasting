@@ -5,6 +5,7 @@ prerequisites:
     - data/modelled/sari_41002_20090614_20091122_mcmc.rds
 targets:
     - data/figures/sari_nowcast.png
+makefile: false
 ---
 
 ```{r setup, include = FALSE}

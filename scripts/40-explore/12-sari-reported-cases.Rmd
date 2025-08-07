@@ -32,6 +32,7 @@ source(file.path(path_src, "20-processing.R"))
 source(file.path(path_src, "30-eda.R"))
 
 sari <- readRDS(file.path(path_processed, "sari_41002_20090614_20091122.rds"))
+sari
 ```
 
 ## Convert to long format
@@ -39,9 +40,9 @@ sari <- readRDS(file.path(path_processed, "sari_41002_20090614_20091122.rds"))
 Convert data to long format and filter with observed data by the last available date.
 
 ```{r}
-last_date <- max(sari$date)
-sari_long <- reporcases_longer(sari) |>
-    mutate(available_delay = floor(as.numeric(last_date - date) / 7 )) |>
+sari_long <- sari |>
+    mutate(available_delay = seq(n()-1, 0)) |>
+    reporcases_longer() |>
     filter(delay <= available_delay)
 ```
 
@@ -54,7 +55,6 @@ p
 ggsave(file.path(path_figures, "sari_reported_cases.png"), p,
        width = 8, height = 4.5, dpi = 300)
 ```
-
 
 ## Time to execute the task
 

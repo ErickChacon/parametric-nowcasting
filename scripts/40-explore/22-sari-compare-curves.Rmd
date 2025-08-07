@@ -39,11 +39,10 @@ sari <- readRDS(file.path(path_processed, "sari_41002_20090614_20091122.rds"))
 Convert data to long format and filter with observed data by the last available date.
 
 ```{r}
-last_date <- max(sari$date)
 sari_long <- sari |>
-    select(-starts_with("notifications")) |>
+    select(-cases_baseline) |>
+    mutate(available_delay = seq(n()-1, 0)) |>
     reporcases_longer() |>
-    mutate(available_delay = floor(as.numeric(last_date - date) / 7 )) |>
     filter(delay <= available_delay)
 ```
 

@@ -45,11 +45,12 @@ Convert datasets to long format and filter the desired date: `2009-08-30` for SA
 
 ```{r}
 sari_train <- sari |>
-    select(-starts_with("notifications")) |>
+    select(-cases_baseline) |>
     reporcases_longer() |>
     filter(date == "2009-08-30")
 
 huso_train <- huso |>
+    select(-cases_baseline) |>
     reporcases_longer() |>
     filter(date == "2011-05-22")
 ```
