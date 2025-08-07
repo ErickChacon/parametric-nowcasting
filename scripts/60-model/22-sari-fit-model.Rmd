@@ -50,7 +50,6 @@ models <- file.path(path_models, paste0(model_names, ".stan")) |>
 
 ## Fit models
 
-
 Evaluate the priors for the cumulative reporting probability curves.
 
 ```{r}
