@@ -63,6 +63,9 @@ huso_nowcast_70 <- nowcast_periods(huso_mcmc, date_by = "1 day", alpha = 0.3) |>
     filter(model == "gom_ou")
 huso_nowcast_70
 
+huso_nowcast_50 <- nowcast_periods(huso_mcmc, date_by = "1 day", alpha = 0.5) |>
+    filter(model == "gom_ou")
+huso_nowcast_50
 ```
 
 ## Visualize nowcasting per reference date 95%
@@ -89,6 +92,17 @@ ggsave(file.path(path_figures, "huso104_nowcast_ou_70.png"), p,
        width = 8, height = 4, dpi = 300)
 ```
 
+## Visualize nowcasting per reference date 50%
+
+```{r, fig.height = 4}
+p <- plot_nowcast(huso_nowcast_50, huso_summary, by_model = FALSE) +
+    geom_vline(aes(xintercept = reference), huso_aux, linetype = 2, color = "gray50") +
+    theme(legend.position = c(0.88, 0.24))
+p
+
+ggsave(file.path(path_figures, "huso104_nowcast_ou_50.png"), p,
+       width = 8, height = 4, dpi = 300)
+```
 
 ## Time to execute the task
 
