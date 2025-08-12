@@ -13,6 +13,7 @@ target_all = docs/content/_index.html \
 	docs/content/40-explore/22-sari-compare-curves.html \
 	data/figures/huso104_qd_comparison.png \
 	docs/content/40-explore/24-husO104-compare-curves.html \
+	docs/content/40-explore/25-husO104-compare-weekday.html \
 	data/figures/qd_example_sari_huso104.png \
 	docs/content/40-explore/28-example-reporting-probability.html \
 	docs/content/50-simulate/_index.html \
@@ -47,6 +48,7 @@ target_clean = docs/content/_index.html \
 	docs/content/40-explore/14-huso104-reported-cases.html \
 	docs/content/40-explore/22-sari-compare-curves.html \
 	docs/content/40-explore/24-husO104-compare-curves.html \
+	docs/content/40-explore/25-husO104-compare-weekday.html \
 	docs/content/40-explore/28-example-reporting-probability.html \
 	docs/content/50-simulate/_index.html \
 	docs/content/50-simulate/11-test-nonparam.html \
@@ -96,6 +98,10 @@ data/figures/sari_qd_comparison.png docs/content/40-explore/22-sari-compare-curv
 
 data/figures/huso104_qd_comparison.png docs/content/40-explore/24-husO104-compare-curves.html: \
 	scripts/40-explore/24-husO104-compare-curves.Rmd \
+	data/processed/huso104_20110512_20110606.rds
+
+data/figures/huso104_qd_comparison.png docs/content/40-explore/25-husO104-compare-weekday.html: \
+	scripts/40-explore/25-husO104-compare-weekday.Rmd \
 	data/processed/huso104_20110512_20110606.rds
 
 data/figures/qd_example_sari_huso104.png docs/content/40-explore/28-example-reporting-probability.html: \

@@ -1,0 +1,184 @@
+---
+title: "HusO104: Week of day analysis"
+prerequisites:
+    - data/processed/huso104_20110512_20110606.rds
+targets:
+    - data/figures/huso104_qd_comparison.png
+---
+
+
+
+<p>Simply analysis to test if week of day is significantly import in this application.</p>
+<div id="load-packages-scripts-and-data" class="section level2">
+<h2>Load packages, scripts and data</h2>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>#&gt; 
+#&gt; Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:stats&#39;:
+#&gt; 
+#&gt;     filter, lag</code></pre>
+<pre><code>#&gt; The following objects are masked from &#39;package:base&#39;:
+#&gt; 
+#&gt;     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)
+library(ggplot2)
+library(latex2exp)
+
+path_proj &lt;- here::here()
+path_src &lt;- file.path(path_proj, &quot;src&quot;)
+path_data &lt;- file.path(path_proj, &quot;data&quot;)
+path_cleaned &lt;- file.path(path_data, &quot;cleaned&quot;)
+path_processed &lt;- file.path(path_data, &quot;processed&quot;)
+path_figures &lt;- file.path(path_data, &quot;figures&quot;)
+
+source(file.path(path_src, &quot;20-processing.R&quot;))
+source(file.path(path_src, &quot;30-eda.R&quot;))
+
+huso &lt;- readRDS(file.path(path_processed, &quot;huso104_20110512_20110606.rds&quot;))</code></pre>
+</div>
+<div id="convert-to-long-format" class="section level2">
+<h2>Convert to long format</h2>
+<p>Convert data to long format and filter with observed data by the last available date.</p>
+<pre class="r"><code>huso_long &lt;- huso |&gt;
+    select(-cases_baseline) |&gt;
+    mutate(available_delay = seq(n()-1, 0)) |&gt;
+    reporcases_longer() |&gt;
+    filter(delay &lt;= available_delay)</code></pre>
+</div>
+<div id="fit-exponential-and-gompertz-curves" class="section level2">
+<h2>Fit Exponential and Gompertz curves</h2>
+<p>We will compare the exponential and Gompertz growth curves assuming a time-invariant
+reporting probability in the period of time between <code>2009-07-19</code> and <code>2009-09-06</code>.</p>
+<pre class="r"><code># prepare the data to train
+# somedates &lt;- seq(as.Date(&quot;2011-05-12&quot;), as.Date(&quot;2011-06-01&quot;), &quot;1 day&quot;)
+somedates &lt;- seq(as.Date(&quot;2011-05-12&quot;), as.Date(&quot;2011-06-01&quot;), &quot;1 day&quot;)
+df_train &lt;- filter(huso_long, date %in% somedates) |&gt;
+    mutate(weekday = factor(weekdays(date)), date = factor(date))
+df_fit &lt;- data.frame(delay = seq(0, max(df_train$delay), length = 100))
+
+# initial values
+max_cases &lt;- group_by(df_train, date) |&gt;
+    summarise(cases = max(cases)) |&gt;
+    pull(cases)
+
+# fit models
+mod_gomp &lt;- nls(
+    cases ~ exp(logN[date]) * exp(logphi*exp(-b * delay)),
+    data = df_train,
+    start = list(b = 0.5, logphi = log(0.05), logN = log(max_cases))
+)
+mod_gomp</code></pre>
+<pre><code>#&gt; Nonlinear regression model
+#&gt;   model: cases ~ exp(logN[date]) * exp(logphi * exp(-b * delay))
+#&gt;    data: df_train
+#&gt;       b  logphi   logN1   logN2   logN3   logN4   logN5   logN6   logN7   logN8   logN9  logN10 
+#&gt;  0.3038 -4.2775 -0.5861  1.0025 -0.6026  1.7715  1.8542  2.7637  2.7618  3.3201  3.4385  4.1349 
+#&gt;  logN11  logN12  logN13  logN14  logN15  logN16  logN17  logN18  logN19  logN20  logN21 
+#&gt;  3.7961  3.5679  3.8602  3.7629  3.5922  3.4839  3.0531  3.1528  3.2606  2.8611  2.7808 
+#&gt;  residual sum-of-squares: 1985
+#&gt; 
+#&gt; Number of iterations to convergence: 8 
+#&gt; Achieved convergence tolerance: 8.846e-06</code></pre>
+<pre class="r"><code>mod_gomp_weekday &lt;- nls(
+    cases ~ exp(logN[date]) * exp(logphi*exp(-b[weekday] * delay)),
+    data = df_train,
+    start = list(b = rep(0.5, 7), logphi = log(0.05), logN = log(max_cases))
+)
+mod_gomp_weekday</code></pre>
+<pre><code>#&gt; Nonlinear regression model
+#&gt;   model: cases ~ exp(logN[date]) * exp(logphi * exp(-b[weekday] * delay))
+#&gt;    data: df_train
+#&gt;      b1      b2      b3      b4      b5      b6      b7  logphi   logN1   logN2   logN3   logN4 
+#&gt;  0.2423  0.3330  0.3079  0.3032  0.3190  0.3424  0.2857 -4.3061 -0.6253  1.2069 -0.6112  1.7752 
+#&gt;   logN5   logN6   logN7   logN8   logN9  logN10  logN11  logN12  logN13  logN14  logN15  logN16 
+#&gt;  1.7897  2.6904  2.8047  3.2941  3.5939  4.1289  3.7986  3.5172  3.7897  3.8119  3.5564  3.7175 
+#&gt;  logN17  logN18  logN19  logN20  logN21 
+#&gt;  3.0428  3.1583  3.1563  2.7107  2.8785 
+#&gt;  residual sum-of-squares: 1910
+#&gt; 
+#&gt; Number of iterations to convergence: 11 
+#&gt; Achieved convergence tolerance: 5.169e-06</code></pre>
+<pre class="r"><code>predict(mod_gomp)</code></pre>
+<pre><code>#&gt;   [1]  0.007722901  0.023682267  0.054148268  0.099691829  0.156421056  0.218113187  0.278769290
+#&gt;   [8]  0.334112379  0.381889380  0.421480083  0.453308910  0.478331494  0.497680824  0.512461639
+#&gt;  [15]  0.523651282  0.532066080  0.037816559  0.115964432  0.265146624  0.488158771  0.765943517
+#&gt;  [22]  1.068030011  1.365043404  1.636040684  1.869989264  2.063852183  2.219707694  2.342235226
+#&gt;  [29]  2.436982662  2.509359554  2.564151627  2.605356182  0.007596455  0.023294520  0.053261705
+#&gt;  [36]  0.098059587  0.153859993  0.214542046  0.274205034  0.328641998  0.375636751  0.414579240
+#&gt;  [43]  0.445886938  0.470499830  0.489532356  0.504071167  0.515077602  0.523354626  0.081590757
+#&gt;  [50]  0.250197956  0.572064574  1.053222309  1.652554145  2.304317983  2.945136401  3.529824004
+#&gt;  [57]  4.034577535  4.452844631  4.789109204  5.053467316  5.257888743  5.414044817  5.532260934
+#&gt;  [64]  5.621161430  0.088629347  0.271781785  0.621414873  1.144080646  1.795115046  2.503104600
+#&gt;  [71]  3.199204505  3.834331358  4.382628465  4.836978213  5.202251324  5.489414819  5.711471071
+#&gt;  [78]  5.881098262  6.009512530  6.106082205  0.220072064  0.674850717  1.543010959  2.840821891
+#&gt;  [85]  4.457379938  6.215361102  7.943819543  9.520878183 10.882333279 12.010511360 12.917506732
+#&gt;  [92] 13.630551172 14.181930363 14.603125006 14.921985450 15.161773833  0.219657585  0.673579719
+#&gt;  [99]  1.540104888  2.835471552  4.448985011  6.203655234  7.928858335  9.502946779 10.861837742
+#&gt; [106] 11.987891039 12.893178196 13.604879705 14.155220440 14.575621816 14.893881725 15.133218496
+#&gt; [113]  0.383877234  1.177159072  2.691512807  4.955317041  7.775119883 10.841610622 13.856604134
+#&gt; [120] 16.607507166 18.982327516 20.950236906 22.532331734 23.776113077 24.737897660 25.472598066
+#&gt; [127] 26.028794354 26.447063258  0.432129736  1.325125309  3.029829890  5.578189205  8.752434897
+#&gt; [134] 12.204376598 15.598347986 18.695033318 21.368363224 23.583634381 25.364594957 26.764716807
+#&gt; [141] 27.847395541 28.674446128 29.300555034 29.771399395  0.867097757  2.658954217  6.079560104
+#&gt; [148] 11.193016695 17.562356946 24.488913159 31.299147988 37.512858091 42.877076688 47.322169197
+#&gt; [155] 50.895787932 53.705227818 55.877696463 57.537229816 58.793559993 59.738341284  0.617933422
+#&gt; [162]  1.894892087  4.332571903  7.976654366 12.515736824 17.451916797 22.305200846 26.733374160
+#&gt; [169] 30.556161069 33.723936793 36.270660546 38.272795587 39.820995859 41.003655042 41.898973244
+#&gt; [176] 42.572267497  0.491841207  1.508230463  3.448490272  6.348980605  9.961841983 13.890771265
+#&gt; [183] 17.753719925 21.278303691 24.321032989 26.842409209 28.869462028 30.463052016 31.695334757
+#&gt; [190] 32.636666782 33.349291103  0.658826818  2.020291637  4.619291431  8.504530793 13.343999166
+#&gt; [197] 18.606844045 23.781307140 28.502526660 32.578296712 35.955708463 38.670968469 40.805600148
+#&gt; [204] 42.456256712 43.717181527  0.597753012  1.833008885  4.191079189  7.716153559 12.106999101
+#&gt; [211] 16.881973786 21.576759754 25.860318211 29.558260915 32.622583726 35.086136821 37.022886329
+#&gt; [218] 38.520525627  0.503958005  1.545386611  3.533445865  6.505391489 10.207257839 14.232978613
+#&gt; [225] 18.191093293 21.802507260 24.920195990 27.503687801 29.580678262 31.213527280  0.452203595
+#&gt; [232]  1.386681774  3.170575535  5.837314591  9.159014522 12.771310362 16.322942976 19.563479610
+#&gt; [239] 22.360994556 24.679172404 26.542864504  0.293929885  0.901335634  2.060856906  3.794222832
+#&gt; [246]  5.953309776  8.301282485 10.609824426 12.716155667 14.534525212 16.041328244  0.324757314
+#&gt; [253]  0.995867909  2.277000020  4.192161736  6.577694181  9.171922770 11.722585084 14.049828797
+#&gt; [260] 16.058909329  0.361725969  1.109232245  2.536201661  4.669375259  7.326464102 10.216005956
+#&gt; [267] 13.057022179 15.649187010  0.242578499  0.743866671  1.700812337  3.131348414  4.913229388
+#&gt; [274]  6.850996605  8.756221855  0.223873745  0.686508567  1.569666024  2.889896261  4.534379878
+#&gt; [281]  6.322729653</code></pre>
+<pre class="r"><code># summarise
+list(Constant = mod_gomp, Weekday = mod_gomp_weekday) |&gt;
+    sapply(function(x) c(AIC = AIC(x), BIC = BIC(x), SSE = deviance(x))) |&gt;
+    data.frame()</code></pre>
+<pre><code>#&gt;     Constant  Weekday
+#&gt; AIC 1394.827 1396.029
+#&gt; BIC 1482.147 1505.179
+#&gt; SSE 1985.161 1910.323</code></pre>
+</div>
+<div id="visualize-fitted-curves" class="section level2">
+<h2>Visualize fitted curves</h2>
+<p>Let’s obtain the curves with the estimated parameter for each model.</p>
+<pre class="r"><code>df_train &lt;- df_train |&gt;
+    mutate(pred_const = predict(mod_gomp), pred_weekday = predict(mod_gomp_weekday))</code></pre>
+<p>Visualize the estimated theoretical curves using the model constant and with
+day-of-effects.</p>
+<pre class="r"><code>custom_date &lt;- function(x) paste(x, weekdays(as.Date(x), TRUE), sep = &quot;: &quot;)
+p &lt;- plot_reported(df_train, maxdelay = 15) +
+    geom_line(aes(delay, pred_const, color = &quot;Constant&quot;), size = rel(0.5)) +
+    geom_line(aes(delay, pred_weekday, color = &quot;Day-of-week&quot;), size = rel(0.5)) +
+    facet_wrap(~ date, scales = &quot;free_y&quot;, ncol = 7, labeller = labeller(date = custom_date)) +
+    labs(color = NULL) +
+    theme(
+          legend.position = &quot;bottom&quot;,
+          legend.background = element_rect(fill = &quot;transparent&quot;)
+    )</code></pre>
+<pre><code>#&gt; Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+#&gt; ℹ Please use `linewidth` instead.
+#&gt; This warning is displayed once every 8 hours.
+#&gt; Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.</code></pre>
+<pre class="r"><code>p</code></pre>
+<p><img src="/parametric-nowcasting/40-explore/25-husO104-compare-weekday_files/figure-html/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggsave(file.path(path_figures, &quot;huso104_day_of_week.png&quot;), p,
+       width = 8, height = 4.5, dpi = 300)</code></pre>
+</div>
+<div id="time-to-execute-the-task" class="section level2">
+<h2>Time to execute the task</h2>
+<p>Only useful when executed with <code>Rscript</code>.</p>
+<pre class="r"><code>proc.time()</code></pre>
+<pre><code>#&gt;    user  system elapsed 
+#&gt;   2.696   0.318   2.700</code></pre>
+</div>
