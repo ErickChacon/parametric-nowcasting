@@ -80,8 +80,6 @@ mod_gomp_weekday <- nls(
 )
 mod_gomp_weekday
 
-predict(mod_gomp)
-
 # summarise
 list(Constant = mod_gomp, Weekday = mod_gomp_weekday) |>
     sapply(function(x) c(AIC = AIC(x), BIC = BIC(x), SSE = deviance(x))) |>
