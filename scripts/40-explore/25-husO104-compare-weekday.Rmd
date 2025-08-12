@@ -3,7 +3,7 @@ title: "HusO104: Week of day analysis"
 prerequisites:
     - data/processed/huso104_20110512_20110606.rds
 targets:
-    - data/figures/huso104_qd_comparison.png
+    - data/figures/huso104_day_of_week.png
 ---
 
 ```{r setup, include = FALSE}
@@ -48,14 +48,13 @@ huso_long <- huso |>
     filter(delay <= available_delay)
 ```
 
-## Fit Exponential and Gompertz curves
+## Fit EGompertz curves
 
-We will compare the exponential and Gompertz growth curves assuming a time-invariant
-reporting probability in the period of time between `2009-07-19` and `2009-09-06`.
+We will compare the Gompertz growth curves assuming a time-invariant
+reporting probability in the period of time between `2011-05-12` and `2011-06-01`.
 
 ```{r}
 # prepare the data to train
-# somedates <- seq(as.Date("2011-05-12"), as.Date("2011-06-01"), "1 day")
 somedates <- seq(as.Date("2011-05-12"), as.Date("2011-06-01"), "1 day")
 df_train <- filter(huso_long, date %in% somedates) |>
     mutate(weekday = factor(weekdays(date)), date = factor(date))

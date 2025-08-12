@@ -3,7 +3,7 @@ title: "HusO104: Week of day analysis"
 prerequisites:
     - data/processed/huso104_20110512_20110606.rds
 targets:
-    - data/figures/huso104_qd_comparison.png
+    - data/figures/huso104_day_of_week.png
 ---
 
 
@@ -45,12 +45,11 @@ huso &lt;- readRDS(file.path(path_processed, &quot;huso104_20110512_20110606.rds
     reporcases_longer() |&gt;
     filter(delay &lt;= available_delay)</code></pre>
 </div>
-<div id="fit-exponential-and-gompertz-curves" class="section level2">
-<h2>Fit Exponential and Gompertz curves</h2>
-<p>We will compare the exponential and Gompertz growth curves assuming a time-invariant
-reporting probability in the period of time between <code>2009-07-19</code> and <code>2009-09-06</code>.</p>
+<div id="fit-egompertz-curves" class="section level2">
+<h2>Fit EGompertz curves</h2>
+<p>We will compare the Gompertz growth curves assuming a time-invariant
+reporting probability in the period of time between <code>2011-05-12</code> and <code>2011-06-01</code>.</p>
 <pre class="r"><code># prepare the data to train
-# somedates &lt;- seq(as.Date(&quot;2011-05-12&quot;), as.Date(&quot;2011-06-01&quot;), &quot;1 day&quot;)
 somedates &lt;- seq(as.Date(&quot;2011-05-12&quot;), as.Date(&quot;2011-06-01&quot;), &quot;1 day&quot;)
 df_train &lt;- filter(huso_long, date %in% somedates) |&gt;
     mutate(weekday = factor(weekdays(date)), date = factor(date))
@@ -180,5 +179,5 @@ p &lt;- plot_reported(df_train, maxdelay = 15) +
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   2.696   0.318   2.700</code></pre>
+#&gt;   2.637   0.329   2.654</code></pre>
 </div>

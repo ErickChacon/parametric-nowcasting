@@ -13,6 +13,7 @@ target_all = docs/content/_index.html \
 	docs/content/40-explore/22-sari-compare-curves.html \
 	data/figures/huso104_qd_comparison.png \
 	docs/content/40-explore/24-husO104-compare-curves.html \
+	data/figures/huso104_day_of_week.png \
 	docs/content/40-explore/25-husO104-compare-weekday.html \
 	data/figures/qd_example_sari_huso104.png \
 	docs/content/40-explore/28-example-reporting-probability.html \
@@ -100,7 +101,7 @@ data/figures/huso104_qd_comparison.png docs/content/40-explore/24-husO104-compar
 	scripts/40-explore/24-husO104-compare-curves.Rmd \
 	data/processed/huso104_20110512_20110606.rds
 
-data/figures/huso104_qd_comparison.png docs/content/40-explore/25-husO104-compare-weekday.html: \
+data/figures/huso104_day_of_week.png docs/content/40-explore/25-husO104-compare-weekday.html: \
 	scripts/40-explore/25-husO104-compare-weekday.Rmd \
 	data/processed/huso104_20110512_20110606.rds
 
