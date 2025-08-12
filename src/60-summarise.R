@@ -139,8 +139,8 @@ nowcast_summary <- function(samples, date_end, date_by = "1 day", alpha = 0.05) 
     date_size <- length(dimnames(draws)$variable)
     dplyr::tibble(
         date = rev(seq(as.Date(date_end), length.out = date_size, by = paste0("-", date_by))),
-        # mean = apply(draws, 3, mean, na.rm = TRUE),
-        median = apply(draws, 3, quantile, probs = 0.5, na.rm = TRUE),
+        mean = apply(draws, 3, mean, na.rm = TRUE),
+        # median = apply(draws, 3, quantile, probs = 0.5, na.rm = TRUE),
         lower = apply(draws, 3, quantile, probs = alpha / 2, na.rm = TRUE),
         upper = apply(draws, 3, quantile, probs = 1 - alpha / 2, na.rm = TRUE)
     )
@@ -196,7 +196,8 @@ plot_nowcast <- function(df_nowcast, df_summary, by_model = TRUE, model_labels =
 
   gg <- ggplot(df_nowcast) +
     geom_ribbon(aes(x = date, ymin = lower, ymax = upper, fill = model), alpha = 0.4, show.legend = FALSE) +
-    geom_line(aes(date, median, color = model), linewidth = rel(0.4)) +
+    # geom_line(aes(date, median, color = model), linewidth = rel(0.4)) +
+    geom_line(aes(date, mean, color = model), linewidth = rel(0.4)) +
     geom_line(aes(date, cases_reported, color = "Current reported cases"), df_summary, linewidth = rel(0.4)) +
     geom_point(aes(date, cases_reported, color = "Current reported cases"), df_summary, size = rel(0.5)) +
     geom_line(aes(date, cases_baseline, color = "Eventual reported cases"), df_summary, linetype = 6)
