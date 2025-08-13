@@ -1,5 +1,5 @@
 ---
-title: "HusO104: Week of day analysis"
+title: "HusO104: Day of week analysis"
 prerequisites:
     - data/processed/huso104_20110512_20110606.rds
 targets:
@@ -45,8 +45,8 @@ huso &lt;- readRDS(file.path(path_processed, &quot;huso104_20110512_20110606.rds
     reporcases_longer() |&gt;
     filter(delay &lt;= available_delay)</code></pre>
 </div>
-<div id="fit-egompertz-curves" class="section level2">
-<h2>Fit EGompertz curves</h2>
+<div id="fit-gompertz-curves" class="section level2">
+<h2>Fit Gompertz curves</h2>
 <p>We will compare the Gompertz growth curves assuming a time-invariant
 reporting probability in the period of time between <code>2011-05-12</code> and <code>2011-06-01</code>.</p>
 <pre class="r"><code># prepare the data to train
@@ -137,5 +137,5 @@ p &lt;- plot_reported(df_train, maxdelay = 15) +
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   2.654   0.338   2.679</code></pre>
+#&gt;   2.790   0.359   3.032</code></pre>
 </div>

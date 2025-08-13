@@ -1,5 +1,5 @@
 ---
-title: "HusO104: Week of day analysis"
+title: "HusO104: Day of week analysis"
 prerequisites:
     - data/processed/huso104_20110512_20110606.rds
 targets:
@@ -48,7 +48,7 @@ huso_long <- huso |>
     filter(delay <= available_delay)
 ```
 
-## Fit EGompertz curves
+## Fit Gompertz curves
 
 We will compare the Gompertz growth curves assuming a time-invariant
 reporting probability in the period of time between `2011-05-12` and `2011-06-01`.
