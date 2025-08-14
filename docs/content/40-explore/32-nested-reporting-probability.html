@@ -57,8 +57,9 @@ p &lt;- ggplot(df) +
     geom_line(aes(delay, q4, color = &quot;Shifted nested function&quot;), linetype = 4, linewidth = 0.7) +
     labs(color = &quot;&quot;, y = &quot;Cumulative reporting probability&quot;) +
     theme_bw(9)
-
-ggsave(file.path(path_figures, &quot;qd_nested_functions.png&quot;), p,
+p</code></pre>
+<p><img src="/parametric-nowcasting/40-explore/32-nested-reporting-probability_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggsave(file.path(path_figures, &quot;qd_nested_functions.png&quot;), p,
       width = 8, height = 4, dpi = 300)</code></pre>
 </div>
 <div id="time-to-execute-the-task" class="section level2">
@@ -66,5 +67,5 @@ ggsave(file.path(path_figures, &quot;qd_nested_functions.png&quot;), p,
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   0.759   0.320   0.761</code></pre>
+#&gt;   1.065   0.323   1.071</code></pre>
 </div>

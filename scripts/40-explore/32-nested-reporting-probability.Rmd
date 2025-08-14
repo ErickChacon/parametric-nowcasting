@@ -59,6 +59,7 @@ p <- ggplot(df) +
     geom_line(aes(delay, q4, color = "Shifted nested function"), linetype = 4, linewidth = 0.7) +
     labs(color = "", y = "Cumulative reporting probability") +
     theme_bw(9)
+p
 
 ggsave(file.path(path_figures, "qd_nested_functions.png"), p,
       width = 8, height = 4, dpi = 300)
