@@ -17,6 +17,7 @@ target_all = docs/content/_index.html \
 	docs/content/40-explore/25-husO104-compare-weekday.html \
 	data/figures/qd_example_sari_huso104.png \
 	docs/content/40-explore/28-example-reporting-probability.html \
+	docs/content/40-explore/32-nested-reporting-probability.html \
 	docs/content/50-simulate/_index.html \
 	docs/content/50-simulate/11-test-nonparam.html \
 	docs/content/50-simulate/12-test-param-exp.html \
@@ -51,6 +52,7 @@ target_clean = docs/content/_index.html \
 	docs/content/40-explore/24-husO104-compare-curves.html \
 	docs/content/40-explore/25-husO104-compare-weekday.html \
 	docs/content/40-explore/28-example-reporting-probability.html \
+	docs/content/40-explore/32-nested-reporting-probability.html \
 	docs/content/50-simulate/_index.html \
 	docs/content/50-simulate/11-test-nonparam.html \
 	docs/content/50-simulate/12-test-param-exp.html \
@@ -109,6 +111,9 @@ data/figures/qd_example_sari_huso104.png docs/content/40-explore/28-example-repo
 	scripts/40-explore/28-example-reporting-probability.Rmd \
 	data/processed/huso104_20110512_20110606.rds \
 	data/processed/sari_41002_20090614_20091122.rds
+
+docs/content/40-explore/32-nested-reporting-probability.html: \
+	scripts/40-explore/32-nested-reporting-probability.Rmd
 
 docs/content/50-simulate/_index.html: \
 	scripts/50-simulate/_index.Rmd
