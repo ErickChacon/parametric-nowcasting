@@ -53,16 +53,17 @@ df <- data.frame(delay = seq(0, 15, length = 1000)) |>
            q4 = qexp_nested_shifted(0.8, 1, 0.4)(delay))
 
 p <- ggplot(df) +
-    geom_line(aes(delay, q1, color = "Exponential: b = 1")) +
-    geom_line(aes(delay, q2, color = "Exponential: b = 0.4")) +
-    geom_line(aes(delay, q3, color = "Nested function"), linetype = 2, linewidth = 0.7) +
-    geom_line(aes(delay, q4, color = "Shifted nested function"), linetype = 4, linewidth = 0.7) +
+    geom_line(aes(delay, q1, color = "(a) Exponential with quick convergence")) +
+    geom_line(aes(delay, q2, color = "(b) Exponential with slow convergence")) +
+    geom_line(aes(delay, q3, color = "(c) Nested function"), linetype = 2, linewidth = 0.7) +
+    geom_line(aes(delay, q4, color = "(d) Shifted nested function"), linetype = 4, linewidth = 0.7) +
     labs(color = "", y = "Cumulative reporting probability") +
-    theme_bw(9)
+    theme_bw(9) +
+    theme(legend.position = c(0.7, 0.35))
 p
 
 ggsave(file.path(path_figures, "qd_nested_functions.png"), p,
-      width = 8, height = 4, dpi = 300)
+      width = 6, height = 4, dpi = 300)
 ```
 
 ## Time to execute the task

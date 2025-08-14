@@ -51,21 +51,26 @@ qexp_nested_shifted &lt;- function(alpha, b1, b2) {
            q4 = qexp_nested_shifted(0.8, 1, 0.4)(delay))
 
 p &lt;- ggplot(df) +
-    geom_line(aes(delay, q1, color = &quot;Exponential: b = 1&quot;)) +
-    geom_line(aes(delay, q2, color = &quot;Exponential: b = 0.4&quot;)) +
-    geom_line(aes(delay, q3, color = &quot;Nested function&quot;), linetype = 2, linewidth = 0.7) +
-    geom_line(aes(delay, q4, color = &quot;Shifted nested function&quot;), linetype = 4, linewidth = 0.7) +
+    geom_line(aes(delay, q1, color = &quot;(a) Exponential with quick convergence&quot;)) +
+    geom_line(aes(delay, q2, color = &quot;(b) Exponential with slow convergence&quot;)) +
+    geom_line(aes(delay, q3, color = &quot;(c) Nested function&quot;), linetype = 2, linewidth = 0.7) +
+    geom_line(aes(delay, q4, color = &quot;(d) Shifted nested function&quot;), linetype = 4, linewidth = 0.7) +
     labs(color = &quot;&quot;, y = &quot;Cumulative reporting probability&quot;) +
-    theme_bw(9)
-p</code></pre>
+    theme_bw(9) +
+    theme(legend.position = c(0.7, 0.35))</code></pre>
+<pre><code>#&gt; Warning: A numeric `legend.position` argument in `theme()` was deprecated in ggplot2 3.5.0.
+#&gt; ℹ Please use the `legend.position.inside` argument of `theme()` instead.
+#&gt; This warning is displayed once every 8 hours.
+#&gt; Call `lifecycle::last_lifecycle_warnings()` to see where this warning was generated.</code></pre>
+<pre class="r"><code>p</code></pre>
 <p><img src="/parametric-nowcasting/40-explore/32-nested-reporting-probability_files/figure-html/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /></p>
 <pre class="r"><code>ggsave(file.path(path_figures, &quot;qd_nested_functions.png&quot;), p,
-      width = 8, height = 4, dpi = 300)</code></pre>
+      width = 6, height = 4, dpi = 300)</code></pre>
 </div>
 <div id="time-to-execute-the-task" class="section level2">
 <h2>Time to execute the task</h2>
 <p>Only useful when executed with <code>Rscript</code>.</p>
 <pre class="r"><code>proc.time()</code></pre>
 <pre><code>#&gt;    user  system elapsed 
-#&gt;   1.065   0.323   1.071</code></pre>
+#&gt;   1.089   0.339   1.110</code></pre>
 </div>
