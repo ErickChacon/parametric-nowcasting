@@ -1,7 +1,7 @@
 data/cleaned
 data/draws
 data/modelled
-data/processed
+# data/processed
 
 # Stan models
 src/models/nonparam
